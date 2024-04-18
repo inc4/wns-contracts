@@ -14,12 +14,14 @@ interface AggregatorInterface {
 contract StablePriceOracle is IPriceOracle {
     using StringUtils for *;
 
+    address internal owner;
+
     // Rent in base price units by length
-    uint256 public immutable price1Letter;
-    uint256 public immutable price2Letter;
-    uint256 public immutable price3Letter;
-    uint256 public immutable price4Letter;
-    uint256 public immutable price5Letter;
+    uint256 public price2Letter;
+    uint256 public price3Letter;
+    uint256 public price4Letter;
+    uint256 public price5Letter;
+    uint256 public price6Letter;
 
     // Oracle address
     AggregatorInterface public immutable usdOracle;
@@ -27,12 +29,13 @@ contract StablePriceOracle is IPriceOracle {
     event RentPriceChanged(uint256[] prices);
 
     constructor(AggregatorInterface _usdOracle, uint256[] memory _rentPrices) {
+        owner = msg.sender;
         usdOracle = _usdOracle;
-        price1Letter = _rentPrices[0];
-        price2Letter = _rentPrices[1];
-        price3Letter = _rentPrices[2];
-        price4Letter = _rentPrices[3];
-        price5Letter = _rentPrices[4];
+        price2Letter = _rentPrices[0];
+        price3Letter = _rentPrices[1];
+        price4Letter = _rentPrices[2];
+        price5Letter = _rentPrices[3];
+        price6Letter = _rentPrices[4];
     }
 
     function price(
@@ -43,16 +46,16 @@ contract StablePriceOracle is IPriceOracle {
         uint256 len = name.strlen();
         uint256 basePrice;
 
-        if (len >= 5) {
+        if (len >= 6) {
+            basePrice = price6Letter * duration;
+        } else if (len == 5) {
             basePrice = price5Letter * duration;
         } else if (len == 4) {
             basePrice = price4Letter * duration;
         } else if (len == 3) {
             basePrice = price3Letter * duration;
-        } else if (len == 2) {
-            basePrice = price2Letter * duration;
         } else {
-            basePrice = price1Letter * duration;
+            basePrice = price2Letter * duration;
         }
 
         return
@@ -60,6 +63,16 @@ contract StablePriceOracle is IPriceOracle {
                 base: attoUSDToWei(basePrice),
                 premium: attoUSDToWei(_premium(name, expires, duration))
             });
+    }
+
+    function updatePrices(uint256[] memory rentPrices) external onlyOwner {
+        price2Letter = rentPrices[0];
+        price3Letter = rentPrices[1];
+        price4Letter = rentPrices[2];
+        price5Letter = rentPrices[3];
+        price6Letter = rentPrices[4];
+
+        emit RentPriceChanged(rentPrices);
     }
 
     /**
@@ -100,5 +113,10 @@ contract StablePriceOracle is IPriceOracle {
         return
             interfaceID == type(IERC165).interfaceId ||
             interfaceID == type(IPriceOracle).interfaceId;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only callable by owner");
+        _;
     }
 }
