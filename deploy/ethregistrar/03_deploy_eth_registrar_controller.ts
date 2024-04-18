@@ -97,6 +97,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await tx3.wait()
 }
 
+func.id = 'controller'
 func.tags = ['ethregistrar', 'ETHRegistrarController']
 func.dependencies = [
   'ENSRegistry',

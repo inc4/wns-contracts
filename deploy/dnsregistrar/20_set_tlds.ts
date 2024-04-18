@@ -1224,6 +1224,7 @@ const tld_map = {
   hardhat: ['xyz'],
   goerli: fullMap,
   sepolia: ['com', 'xyz'],
+  w_testnet: ['xyz'],
 }
 
 const ZERO_HASH =
