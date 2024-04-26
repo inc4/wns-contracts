@@ -5,11 +5,15 @@
   "scripts": {
     "test": "hardhat test",
     "test:local": "hardhat --network localhost test",
-    "localhost:deploy": "hardhat --network localhost deploy",
-    "white_chain_testnet:deploy": "hardhat --network white_chain_testnet deploy",
+    "deploy:hardhat": "hardhat --network hardhat deploy",
+    "deploy:localhost": "hardhat --network localhost deploy",
+    "deploy:white_chain_testnet": "hardhat --network white_chain_testnet deploy",
     "lint": "hardhat check",
     "build": "rm -rf ./build/deploy ./build/hardhat.config.js && hardhat compile && tsc",
     "format": "prettier --write .",
+    "prepublishOnly": "yarn build",
+    "pub": "yarn publish --access public",
+    "prepare": "husky install",
     "wikiCheck": "node wikiCheck.js"
   },
   "files": [
