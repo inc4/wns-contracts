@@ -4,6 +4,7 @@ import '@nomiclabs/hardhat-ethers'
 import '@nomiclabs/hardhat-solhint'
 import '@nomiclabs/hardhat-truffle5'
 import '@nomiclabs/hardhat-waffle'
+import dotenv from 'dotenv'
 import 'hardhat-abi-exporter'
 import 'hardhat-contract-sizer'
 import 'hardhat-deploy'
@@ -18,6 +19,8 @@ import './tasks/accounts'
 import './tasks/archive_scan'
 import './tasks/save'
 import './tasks/seed'
+
+dotenv.config({ debug: false })
 
 let real_accounts = undefined
 if (process.env.DEPLOYER_KEY) {
