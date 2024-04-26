@@ -39,6 +39,7 @@ contract ETHRegistrarController is
     using StringUtils for *;
     using Address for address;
 
+    uint256 public minAllowedDomainLength;
     uint256 public constant MIN_REGISTRATION_DURATION = 28 days;
     // namehash of wbt
     bytes32 private constant ETH_NODE =
@@ -75,7 +76,8 @@ contract ETHRegistrarController is
         uint256 _maxCommitmentAge,
         ReverseRegistrar _reverseRegistrar,
         INameWrapper _nameWrapper,
-        ENS _ens
+        ENS _ens,
+        uint256 _minAllowedDomainLength
     ) ReverseClaimer(_ens, msg.sender) {
         if (_maxCommitmentAge <= _minCommitmentAge) {
             revert MaxCommitmentAgeTooLow();
@@ -91,6 +93,7 @@ contract ETHRegistrarController is
         maxCommitmentAge = _maxCommitmentAge;
         reverseRegistrar = _reverseRegistrar;
         nameWrapper = _nameWrapper;
+        minAllowedDomainLength = _minAllowedDomainLength;
     }
 
     function rentPrice(
@@ -102,7 +105,7 @@ contract ETHRegistrarController is
     }
 
     function valid(string memory name) public pure returns (bool) {
-        return name.strlen() >= 3;
+        return name.strlen() >= minAllowedDomainLength;
     }
 
     function available(string memory name) public view override returns (bool) {
@@ -231,6 +234,12 @@ contract ETHRegistrarController is
         payable(owner()).transfer(address(this).balance);
     }
 
+    function updateMinAllowedDomainLength(
+        uint256 domainLength
+    ) public onlyOwner {
+        minAllowedDomainLength = domainLength;
+    }
+
     function supportsInterface(
         bytes4 interfaceID
     ) external pure returns (bool) {
@@ -288,5 +297,10 @@ contract ETHRegistrarController is
             resolver,
             string.concat(name, ".wbt")
         );
+    }
+
+    modifier onlyOwner() override {
+        require(msg.sender == owner(), "Only callable by owner");
+        _;
     }
 }

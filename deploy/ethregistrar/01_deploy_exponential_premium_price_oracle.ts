@@ -2,6 +2,7 @@ import { DeployFunction } from 'hardhat-deploy/types'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import BigNumber from 'bignumber.js'
 
+const price1Letter = '0'
 const price2LetterPerSeconds = calculateRentPricePerSecondInAttoUSD(
   process.env.PRICE_2_LETTER!,
 )
@@ -40,6 +41,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [
       oracleAddress,
       [
+        price1Letter,
         price2LetterPerSeconds,
         price3LetterPerSeconds,
         price4LetterPerSeconds,
