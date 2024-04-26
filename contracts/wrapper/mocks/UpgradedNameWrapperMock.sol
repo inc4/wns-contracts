@@ -7,7 +7,7 @@ import {BytesUtils} from "../BytesUtils.sol";
 
 contract UpgradedNameWrapperMock is INameWrapperUpgrade {
     using BytesUtils for bytes;
-
+    // namehash of wbt
     bytes32 private constant ETH_NODE =
         0xfc97184b4cad3ee23a98f70b5e40845bfde0e68147e57dfac1d04a3016c10a5d;
 

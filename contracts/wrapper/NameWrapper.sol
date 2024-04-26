@@ -46,8 +46,10 @@ contract NameWrapper is
     string public constant name = "NameWrapper";
 
     uint64 private constant GRACE_PERIOD = 30 days;
+    // namehash of wbt
     bytes32 private constant ETH_NODE =
         0xfc97184b4cad3ee23a98f70b5e40845bfde0e68147e57dfac1d04a3016c10a5d;
+    // labelhash of wbt
     bytes32 private constant ETH_LABELHASH =
         0x9e313471cf3f4d3d1d03709ee288147c4acfd0239b01dc8e1a1dc598ea223b64;
     bytes32 private constant ROOT_NODE =
