@@ -71,7 +71,7 @@
     "url": "git+https://github.com/inc4/wns-contracts"
   },
   "author": "",
-  "license": "",
+  "license": "MIT",
   "bugs": {
     "url": ""
   },
