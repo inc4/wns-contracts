@@ -2,57 +2,18 @@ import { ethers } from 'hardhat'
 import { DeployFunction } from 'hardhat-deploy/types'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 
-const ZERO_HASH =
-  '0x0000000000000000000000000000000000000000000000000000000000000000'
+const ZERO_HASH = process.env.ZERO_HASH
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { getNamedAccounts, deployments, network } = hre
   const { deploy, run } = deployments
   const { deployer, owner } = await getNamedAccounts()
 
-  if (network.tags.legacy) {
-    const contract = await deploy('LegacyENSRegistry', {
-      from: owner,
-      args: [],
-      log: true,
-      contract: await deployments.getArtifact('ENSRegistry'),
-    })
-
-    const legacyRegistry = await ethers.getContract('LegacyENSRegistry')
-
-    const rootTx = await legacyRegistry
-      .connect(await ethers.getSigner(owner))
-      .setOwner(ZERO_HASH, owner)
-    console.log(`Setting owner of root node to owner (tx: ${rootTx.hash})`)
-    await rootTx.wait()
-
-    if (process.env.npm_package_name !== '@ensdomains/ens-contracts') {
-      console.log('Running legacy registry scripts...')
-      await run('legacy-registry-names', {
-        deletePreviousDeployments: false,
-        resetMemory: false,
-      })
-    }
-
-    const revertRootTx = await legacyRegistry
-      .connect(await ethers.getSigner(owner))
-      .setOwner(ZERO_HASH, '0x0000000000000000000000000000000000000000')
-    console.log(`Unsetting owner of root node (tx: ${rootTx.hash})`)
-    await revertRootTx.wait()
-
-    await deploy('ENSRegistry', {
-      from: deployer,
-      args: [contract.address],
-      log: true,
-      contract: await deployments.getArtifact('ENSRegistryWithFallback'),
-    })
-  } else {
-    await deploy('ENSRegistry', {
-      from: deployer,
-      args: [],
-      log: true,
-    })
-  }
+  await deploy('ENSRegistry', {
+    from: deployer,
+    args: [],
+    log: true,
+  })
 
   if (!network.tags.use_root) {
     const registry = await ethers.getContract('ENSRegistry')
