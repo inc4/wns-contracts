@@ -40,50 +40,17 @@ export const archivedDeploymentPath = './deployments/archive'
 const config: HardhatUserConfig = {
   networks: {
     hardhat: {
-      saveDeployments: false,
       tags: ['test', 'legacy', 'use_root'],
-      allowUnlimitedContractSize: false,
     },
     localhost: {
       url: 'http://127.0.0.1:8545',
-      saveDeployments: false,
       tags: ['test', 'legacy', 'use_root'],
     },
-    rinkeby: {
-      url: `https://rinkeby.infura.io/v3/${process.env.INFURA_API_KEY}`,
-      tags: ['test', 'legacy', 'use_root'],
-      chainId: 4,
+    white_chain_testnet: {
+      url: process.env.WHITE_CHAIN_TESTNET_NETWORK_URL,
       accounts: real_accounts,
-    },
-    ropsten: {
-      url: `https://ropsten.infura.io/v3/${process.env.INFURA_API_KEY}`,
-      tags: ['test', 'legacy', 'use_root'],
-      chainId: 3,
-      accounts: real_accounts,
-    },
-    goerli: {
-      url: `https://goerli.infura.io/v3/${process.env.INFURA_API_KEY}`,
-      tags: ['test', 'legacy', 'use_root'],
-      chainId: 5,
-      accounts: real_accounts,
-    },
-    sepolia: {
-      url: `https://sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`,
-      tags: ['test', 'legacy', 'use_root'],
-      chainId: 11155111,
-      accounts: real_accounts,
-    },
-    holesky: {
-      url: `https://holesky-rpc.nocturnode.tech`,
-      tags: ['test', 'legacy', 'use_root'],
-      chainId: 17000,
-      accounts: real_accounts,
-    },
-    mainnet: {
-      url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
-      tags: ['legacy', 'use_root'],
-      chainId: 1,
-      accounts: real_accounts,
+      tags: ['test', 'use_root'],
+      chainId: 2625,
     },
   },
   mocha: {},
@@ -133,7 +100,6 @@ const config: HardhatUserConfig = {
     },
     owner: {
       default: 1,
-      1: '0xFe89cc7aBB2C4183683ab71653C4cdc9B02D44b7',
     },
   },
   external: {

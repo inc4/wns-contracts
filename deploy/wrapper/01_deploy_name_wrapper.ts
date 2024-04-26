@@ -42,7 +42,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   }
 
   // Only attempt to make controller etc changes directly on testnets
-  if (network.name === 'mainnet') return
+  if (network.name === 'white_chain_mainnet') return
 
   const tx2 = await registrar.addController(nameWrapper.address)
   console.log(
@@ -52,21 +52,23 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const artifact = await deployments.getArtifact('INameWrapper')
   const interfaceId = computeInterfaceId(new Interface(artifact.abi))
-  const resolver = await registry.resolver(ethers.utils.namehash('eth'))
+  const resolver = await registry.resolver(
+    ethers.utils.namehash(process.env.WBT_TLD!),
+  )
   if (resolver === ethers.constants.AddressZero) {
     console.log(
-      `No resolver set for .eth; not setting interface ${interfaceId} for NameWrapper`,
+      `No resolver set for .wbt; not setting interface ${interfaceId} for NameWrapper`,
     )
     return
   }
   const resolverContract = await ethers.getContractAt('OwnedResolver', resolver)
   const tx3 = await resolverContract.setInterface(
-    ethers.utils.namehash('eth'),
+    ethers.utils.namehash(process.env.WBT_TLD!),
     interfaceId,
     nameWrapper.address,
   )
   console.log(
-    `Setting NameWrapper interface ID ${interfaceId} on .eth resolver (tx: ${tx3.hash})...`,
+    `Setting NameWrapper interface ID ${interfaceId} on .wbt resolver (tx: ${tx3.hash})...`,
   )
   await tx3.wait()
 }

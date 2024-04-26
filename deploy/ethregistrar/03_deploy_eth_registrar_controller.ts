@@ -2,8 +2,11 @@ import { Interface } from 'ethers/lib/utils'
 import { ethers } from 'hardhat'
 import { DeployFunction } from 'hardhat-deploy/types'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
-
 const { makeInterfaceId } = require('@openzeppelin/test-helpers')
+
+const usdcEContractAddress = process.env.USDC_E_CONTRACT_ADDRESS
+const minCommitmentAge = 60
+const maxCommitmentAge = 86400
 
 function computeInterfaceId(iface: Interface) {
   return makeInterfaceId.ERC165(
@@ -35,11 +38,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [
       registrar.address,
       priceOracle.address,
-      60,
-      86400,
+      minCommitmentAge,
+      maxCommitmentAge,
       reverseRegistrar.address,
       nameWrapper.address,
       registry.address,
+      usdcEContractAddress,
     ],
     log: true,
   }
@@ -56,7 +60,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   }
 
   // Only attempt to make controller etc changes directly on testnets
-  if (network.name === 'mainnet') return
+  if (network.name === 'white_chain_mainnet') return
 
   console.log(
     'WRAPPER OWNER',
@@ -78,25 +82,28 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const artifact = await deployments.getArtifact('IETHRegistrarController')
   const interfaceId = computeInterfaceId(new Interface(artifact.abi))
 
-  const resolver = await registry.resolver(ethers.utils.namehash('eth'))
+  const resolver = await registry.resolver(
+    ethers.utils.namehash(process.env.WBT_TLD!),
+  )
   if (resolver === ethers.constants.AddressZero) {
     console.log(
-      `No resolver set for .eth; not setting interface ${interfaceId} for ETH Registrar Controller`,
+      `No resolver set for .wbt; not setting interface ${interfaceId} for WBT Registrar Controller`,
     )
     return
   }
   const resolverContract = await ethers.getContractAt('OwnedResolver', resolver)
   const tx3 = await resolverContract.setInterface(
-    ethers.utils.namehash('eth'),
+    ethers.utils.namehash(process.env.WBT_TLD!),
     interfaceId,
     controller.address,
   )
   console.log(
-    `Setting ETHRegistrarController interface ID ${interfaceId} on .eth resolver (tx: ${tx3.hash})...`,
+    `Setting ETHRegistrarController interface ID ${interfaceId} on .wbt resolver (tx: ${tx3.hash})...`,
   )
   await tx3.wait()
 }
 
+func.id = 'controller'
 func.tags = ['ethregistrar', 'ETHRegistrarController']
 func.dependencies = [
   'ENSRegistry',
