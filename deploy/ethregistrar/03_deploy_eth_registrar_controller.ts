@@ -7,6 +7,7 @@ const { makeInterfaceId } = require('@openzeppelin/test-helpers')
 const usdcEContractAddress = process.env.USDC_E_CONTRACT_ADDRESS
 const minCommitmentAge = 60
 const maxCommitmentAge = 86400
+const minAllowedDomainLength = +process.env.MIN_ALLOWED_DOMAIN_LENGTH!
 
 function computeInterfaceId(iface: Interface) {
   return makeInterfaceId.ERC165(
@@ -44,6 +45,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       nameWrapper.address,
       registry.address,
       usdcEContractAddress,
+      minAllowedDomainLength,
     ],
     log: true,
   }

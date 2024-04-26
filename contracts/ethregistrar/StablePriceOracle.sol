@@ -17,6 +17,7 @@ contract StablePriceOracle is IPriceOracle {
     address internal owner;
 
     // Rent in base price units by length
+    uint256 public price1Letter;
     uint256 public price2Letter;
     uint256 public price3Letter;
     uint256 public price4Letter;
@@ -31,11 +32,12 @@ contract StablePriceOracle is IPriceOracle {
     constructor(AggregatorInterface _usdOracle, uint256[] memory _rentPrices) {
         owner = msg.sender;
         usdOracle = _usdOracle;
-        price2Letter = _rentPrices[0];
-        price3Letter = _rentPrices[1];
-        price4Letter = _rentPrices[2];
-        price5Letter = _rentPrices[3];
-        price6Letter = _rentPrices[4];
+        price1Letter = _rentPrices[0];
+        price2Letter = _rentPrices[1];
+        price3Letter = _rentPrices[2];
+        price4Letter = _rentPrices[3];
+        price5Letter = _rentPrices[4];
+        price6Letter = _rentPrices[5];
     }
 
     function price(
@@ -53,11 +55,12 @@ contract StablePriceOracle is IPriceOracle {
     }
 
     function updatePrices(uint256[] memory rentPrices) external onlyOwner {
-        price2Letter = rentPrices[0];
-        price3Letter = rentPrices[1];
-        price4Letter = rentPrices[2];
-        price5Letter = rentPrices[3];
-        price6Letter = rentPrices[4];
+        price1Letter = rentPrices[0];
+        price2Letter = rentPrices[1];
+        price3Letter = rentPrices[2];
+        price4Letter = rentPrices[3];
+        price5Letter = rentPrices[4];
+        price6Letter = rentPrices[5];
 
         emit RentPriceChanged(rentPrices);
     }
@@ -117,8 +120,10 @@ contract StablePriceOracle is IPriceOracle {
             basePrice = price4Letter * duration;
         } else if (len == 3) {
             basePrice = price3Letter * duration;
-        } else {
+        } else if (len == 2) {
             basePrice = price2Letter * duration;
+        } else {
+            basePrice = price1Letter * duration;
         }
 
         return basePrice;
