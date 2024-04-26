@@ -2,7 +2,8 @@ import { ethers } from 'hardhat'
 import { DeployFunction } from 'hardhat-deploy/types'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 
-const ZERO_HASH = process.env.ZERO_HASH
+const ZERO_HASH =
+  '0x0000000000000000000000000000000000000000000000000000000000000000'
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { getNamedAccounts, deployments, network } = hre
