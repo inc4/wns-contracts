@@ -1,18 +1,16 @@
 {
-  "name": "@ensdomains/ens-contracts",
+  "name": "wns-contracts",
   "version": "1.0.0",
-  "description": "ENS contracts",
+  "description": "WNS contracts",
   "scripts": {
     "test": "hardhat test",
     "test:local": "hardhat --network localhost test",
-    "test:deploy": "hardhat --network hardhat deploy",
+    "localhost:deploy": "hardhat --network localhost deploy",
+    "white_chain_testnet:deploy": "hardhat --network white_chain_testnet deploy",
     "lint": "hardhat check",
     "build": "rm -rf ./build/deploy ./build/hardhat.config.js && hardhat compile && tsc",
     "format": "prettier --write .",
-    "prepublishOnly": "yarn build",
-    "pub": "yarn publish --access public",
-    "prepare": "husky install",
-    "wikiCheck": "node wikiCheck.js "
+    "wikiCheck": "node wikiCheck.js"
   },
   "files": [
     "build",
@@ -66,15 +64,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ensdomains/ens-contracts.git"
+    "url": "git+https://github.com/inc4/wns-contracts"
   },
   "author": "",
-  "license": "MIT",
+  "license": "",
   "bugs": {
-    "url": "https://github.com/ensdomains/ens-contracts/issues"
+    "url": ""
   },
-  "homepage": "https://github.com/ensdomains/ens-contracts#readme",
+  "homepage": "",
   "volta": {
-    "node": "16.20.2"
+    "node": "18.19.1"
   }
 }
