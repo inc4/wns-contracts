@@ -54,6 +54,20 @@ contract StablePriceOracle is IPriceOracle {
             });
     }
 
+    function priceUSDCe(
+        string calldata name,
+        uint256 expires,
+        uint256 duration
+    ) external view returns (IPriceOracle.Price memory) {
+        uint256 basePrice = _calculateBasePrice(name, duration);
+
+        return
+            IPriceOracle.Price({
+                base: attoUSDToUSDCe(basePrice),
+                premium: attoUSDToUSDCe(_premium(name, expires, duration))
+            });
+    }
+
     function updatePrices(uint256[] memory rentPrices) external onlyOwner {
         price1Letter = rentPrices[0];
         price2Letter = rentPrices[1];
@@ -85,6 +99,10 @@ contract StablePriceOracle is IPriceOracle {
         uint256 duration
     ) internal view virtual returns (uint256) {
         return 0;
+    }
+
+    function attoUSDToUSDCe(uint256 amount) internal pure returns (uint256) {
+        return amount / 1e12;
     }
 
     function attoUSDToWei(uint256 amount) internal view returns (uint256) {

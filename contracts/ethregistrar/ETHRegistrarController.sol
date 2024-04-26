@@ -40,6 +40,7 @@ contract ETHRegistrarController is
     using Address for address;
 
     uint256 public minAllowedDomainLength;
+    address public usdcEAddress;
     uint256 public constant MIN_REGISTRATION_DURATION = 28 days;
     // namehash of wbt
     bytes32 private constant ETH_NODE =
@@ -77,6 +78,7 @@ contract ETHRegistrarController is
         ReverseRegistrar _reverseRegistrar,
         INameWrapper _nameWrapper,
         ENS _ens,
+        address _usdcEAddress,
         uint256 _minAllowedDomainLength
     ) ReverseClaimer(_ens, msg.sender) {
         if (_maxCommitmentAge <= _minCommitmentAge) {
@@ -93,6 +95,7 @@ contract ETHRegistrarController is
         maxCommitmentAge = _maxCommitmentAge;
         reverseRegistrar = _reverseRegistrar;
         nameWrapper = _nameWrapper;
+        usdcEAddress = _usdcEAddress;
         minAllowedDomainLength = _minAllowedDomainLength;
     }
 
@@ -102,6 +105,18 @@ contract ETHRegistrarController is
     ) public view override returns (IPriceOracle.Price memory price) {
         bytes32 label = keccak256(bytes(name));
         price = prices.price(name, base.nameExpires(uint256(label)), duration);
+    }
+
+    function rentPriceUSDCe(
+        string memory name,
+        uint256 duration
+    ) public view returns (IPriceOracle.Price memory price) {
+        bytes32 label = keccak256(bytes(name));
+        price = prices.priceUSDCe(
+            name,
+            base.nameExpires(uint256(label)),
+            duration
+        );
     }
 
     function valid(string memory name) public pure returns (bool) {
@@ -149,6 +164,54 @@ contract ETHRegistrarController is
         commitments[commitment] = block.timestamp;
     }
 
+    function registryByUSDCe(
+        string calldata name,
+        address owner,
+        uint256 duration,
+        bytes32 secret,
+        address resolver,
+        bytes[] calldata data,
+        bool reverseRecord,
+        uint16 ownerControlledFuses,
+        uint256 amountUSDCe
+    ) public {
+        IPriceOracle.Price memory price = rentPriceUSDCe(name, duration);
+        if (amountUSDCe < price.base + price.premium) {
+            revert InsufficientValue();
+        }
+
+        IERC20 usdcEContract = IERC20(usdcEAddress);
+
+        bool transferSuccess = usdcEContract.transferFrom(
+            msg.sender,
+            address(this),
+            amountUSDCe
+        );
+
+        require(transferSuccess, "Transfer failed");
+
+        uint256 expires = _register(
+            name,
+            owner,
+            duration,
+            secret,
+            resolver,
+            data,
+            reverseRecord,
+            ownerControlledFuses
+        );
+
+        _emitRegisteredDomain(name, owner, price, expires);
+
+        if (amountUSDCe > (price.base + price.premium)) {
+            usdcEContract.transferFrom(
+                address(this),
+                msg.sender,
+                amountUSDCe - (price.base + price.premium)
+            );
+        }
+    }
+
     function register(
         string calldata name,
         address owner,
@@ -164,6 +227,128 @@ contract ETHRegistrarController is
             revert InsufficientValue();
         }
 
+        uint256 expires = _register(
+            name,
+            owner,
+            duration,
+            secret,
+            resolver,
+            data,
+            reverseRecord,
+            ownerControlledFuses
+        );
+
+        _emitRegisteredDomain(name, owner, price, expires);
+
+        if (msg.value > (price.base + price.premium)) {
+            payable(msg.sender).transfer(
+                msg.value - (price.base + price.premium)
+            );
+        }
+    }
+
+    function renewByUSDCe(
+        string calldata name,
+        uint256 duration,
+        uint256 amountUSDCe
+    ) public {
+        bytes32 labelhash = keccak256(bytes(name));
+        uint256 tokenId = uint256(labelhash);
+        IPriceOracle.Price memory price = rentPriceUSDCe(name, duration);
+        if (amountUSDCe < price.base + price.premium) {
+            revert InsufficientValue();
+        }
+
+        IERC20 usdcEContract = IERC20(usdcEAddress);
+
+        bool transferSuccess = usdcEContract.transferFrom(
+            msg.sender,
+            address(this),
+            amountUSDCe
+        );
+
+        require(transferSuccess, "Transfer failed");
+
+        uint256 expires = nameWrapper.renew(tokenId, duration);
+
+        if (amountUSDCe > (price.base + price.premium)) {
+            usdcEContract.transferFrom(
+                address(this),
+                msg.sender,
+                amountUSDCe - (price.base + price.premium)
+            );
+        }
+
+        emit NameRenewed(name, labelhash, amountUSDCe, expires);
+    }
+
+    function renew(
+        string calldata name,
+        uint256 duration
+    ) external payable override {
+        bytes32 labelhash = keccak256(bytes(name));
+        uint256 tokenId = uint256(labelhash);
+        IPriceOracle.Price memory price = rentPrice(name, duration);
+        if (msg.value < price.base) {
+            revert InsufficientValue();
+        }
+        uint256 expires = nameWrapper.renew(tokenId, duration);
+
+        if (msg.value > price.base) {
+            payable(msg.sender).transfer(msg.value - price.base);
+        }
+
+        emit NameRenewed(name, labelhash, msg.value, expires);
+    }
+
+    function withdraw() public {
+        payable(owner()).transfer(address(this).balance);
+    }
+
+    function withdrawUSDCe() public {
+        IERC20 usdcEContract = IERC20(usdcEAddress);
+
+        uint256 amountUSDCe = usdcEContract.balanceOf(address(this));
+
+        bool isApproved = usdcEContract.approve(address(this), amountUSDCe);
+
+        require(isApproved, "Approved denied");
+
+        bool transferSuccess = usdcEContract.transferFrom(
+            address(this),
+            owner(),
+            amountUSDCe
+        );
+
+        require(transferSuccess, "Transfer failed");
+    }
+
+    function updateMinAllowedDomainLength(
+        uint256 domainLength
+    ) public onlyOwner {
+        minAllowedDomainLength = domainLength;
+    }
+
+    function supportsInterface(
+        bytes4 interfaceID
+    ) external pure returns (bool) {
+        return
+            interfaceID == type(IERC165).interfaceId ||
+            interfaceID == type(IETHRegistrarController).interfaceId;
+    }
+
+    /* Internal functions */
+
+    function _register(
+        string calldata name,
+        address owner,
+        uint256 duration,
+        bytes32 secret,
+        address resolver,
+        bytes[] calldata data,
+        bool reverseRecord,
+        uint16 ownerControlledFuses
+    ) internal returns (uint256) {
         _consumeCommitment(
             name,
             duration,
@@ -195,60 +380,8 @@ contract ETHRegistrarController is
             _setReverseRecord(name, resolver, msg.sender);
         }
 
-        emit NameRegistered(
-            name,
-            keccak256(bytes(name)),
-            owner,
-            price.base,
-            price.premium,
-            expires
-        );
-
-        if (msg.value > (price.base + price.premium)) {
-            payable(msg.sender).transfer(
-                msg.value - (price.base + price.premium)
-            );
-        }
+        return expires;
     }
-
-    function renew(
-        string calldata name,
-        uint256 duration
-    ) external payable override {
-        bytes32 labelhash = keccak256(bytes(name));
-        uint256 tokenId = uint256(labelhash);
-        IPriceOracle.Price memory price = rentPrice(name, duration);
-        if (msg.value < price.base) {
-            revert InsufficientValue();
-        }
-        uint256 expires = nameWrapper.renew(tokenId, duration);
-
-        if (msg.value > price.base) {
-            payable(msg.sender).transfer(msg.value - price.base);
-        }
-
-        emit NameRenewed(name, labelhash, msg.value, expires);
-    }
-
-    function withdraw() public {
-        payable(owner()).transfer(address(this).balance);
-    }
-
-    function updateMinAllowedDomainLength(
-        uint256 domainLength
-    ) public onlyOwner {
-        minAllowedDomainLength = domainLength;
-    }
-
-    function supportsInterface(
-        bytes4 interfaceID
-    ) external pure returns (bool) {
-        return
-            interfaceID == type(IERC165).interfaceId ||
-            interfaceID == type(IETHRegistrarController).interfaceId;
-    }
-
-    /* Internal functions */
 
     function _consumeCommitment(
         string memory name,
