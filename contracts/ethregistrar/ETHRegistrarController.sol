@@ -12,6 +12,7 @@ import {IETHRegistrarController, IPriceOracle} from "./IETHRegistrarController.s
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {INameWrapper} from "../wrapper/INameWrapper.sol";
 import {ERC20Recoverable} from "../utils/ERC20Recoverable.sol";
 
@@ -39,9 +40,10 @@ contract ETHRegistrarController is
     using StringUtils for *;
     using Address for address;
 
+    address public usdcEAddress;
     uint256 public constant MIN_REGISTRATION_DURATION = 28 days;
     bytes32 private constant ETH_NODE =
-        0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae;
+        0xfc97184b4cad3ee23a98f70b5e40845bfde0e68147e57dfac1d04a3016c10a5d;
     uint64 private constant MAX_EXPIRY = type(uint64).max;
     BaseRegistrarImplementation immutable base;
     IPriceOracle public immutable prices;
@@ -74,7 +76,8 @@ contract ETHRegistrarController is
         uint256 _maxCommitmentAge,
         ReverseRegistrar _reverseRegistrar,
         INameWrapper _nameWrapper,
-        ENS _ens
+        ENS _ens,
+        address _usdcEAddress
     ) ReverseClaimer(_ens, msg.sender) {
         if (_maxCommitmentAge <= _minCommitmentAge) {
             revert MaxCommitmentAgeTooLow();
@@ -90,6 +93,7 @@ contract ETHRegistrarController is
         maxCommitmentAge = _maxCommitmentAge;
         reverseRegistrar = _reverseRegistrar;
         nameWrapper = _nameWrapper;
+        usdcEAddress = _usdcEAddress;
     }
 
     function rentPrice(
@@ -98,6 +102,18 @@ contract ETHRegistrarController is
     ) public view override returns (IPriceOracle.Price memory price) {
         bytes32 label = keccak256(bytes(name));
         price = prices.price(name, base.nameExpires(uint256(label)), duration);
+    }
+
+    function rentPriceUSDCe(
+        string memory name,
+        uint256 duration
+    ) public view returns (IPriceOracle.Price memory price) {
+        bytes32 label = keccak256(bytes(name));
+        price = prices.priceUSDCe(
+            name,
+            base.nameExpires(uint256(label)),
+            duration
+        );
     }
 
     function valid(string memory name) public pure returns (bool) {
@@ -145,6 +161,54 @@ contract ETHRegistrarController is
         commitments[commitment] = block.timestamp;
     }
 
+    function registryByUSDCe(
+        string calldata name,
+        address owner,
+        uint256 duration,
+        bytes32 secret,
+        address resolver,
+        bytes[] calldata data,
+        bool reverseRecord,
+        uint16 ownerControlledFuses,
+        uint256 amountUSDCe
+    ) public {
+        IPriceOracle.Price memory price = rentPriceUSDCe(name, duration);
+        if (amountUSDCe < price.base + price.premium) {
+            revert InsufficientValue();
+        }
+
+        IERC20 usdcEContract = IERC20(usdcEAddress);
+
+        bool transferSuccess = usdcEContract.transferFrom(
+            msg.sender,
+            address(this),
+            amountUSDCe
+        );
+
+        require(transferSuccess, "Transfer failed");
+
+        uint256 expires = _register(
+            name,
+            owner,
+            duration,
+            secret,
+            resolver,
+            data,
+            reverseRecord,
+            ownerControlledFuses
+        );
+
+        _emitRegisteredDomain(name, owner, price, expires);
+
+        if (amountUSDCe > (price.base + price.premium)) {
+            usdcEContract.transferFrom(
+                address(this),
+                msg.sender,
+                amountUSDCe - (price.base + price.premium)
+            );
+        }
+    }
+
     function register(
         string calldata name,
         address owner,
@@ -160,6 +224,138 @@ contract ETHRegistrarController is
             revert InsufficientValue();
         }
 
+        uint256 expires = _register(
+            name,
+            owner,
+            duration,
+            secret,
+            resolver,
+            data,
+            reverseRecord,
+            ownerControlledFuses
+        );
+
+        _emitRegisteredDomain(name, owner, price, expires);
+
+        if (msg.value > (price.base + price.premium)) {
+            payable(msg.sender).transfer(
+                msg.value - (price.base + price.premium)
+            );
+        }
+    }
+
+    function renewByUSDCe(
+        string calldata name,
+        uint256 duration,
+        uint256 amountUSDCe
+    ) public {
+        bytes32 labelhash = keccak256(bytes(name));
+        uint256 tokenId = uint256(labelhash);
+        IPriceOracle.Price memory price = rentPriceUSDCe(name, duration);
+        if (amountUSDCe < price.base + price.premium) {
+            revert InsufficientValue();
+        }
+
+        IERC20 usdcEContract = IERC20(usdcEAddress);
+
+        bool transferSuccess = usdcEContract.transferFrom(
+            msg.sender,
+            address(this),
+            amountUSDCe
+        );
+
+        require(transferSuccess, "Transfer failed");
+
+        uint256 expires = nameWrapper.renew(tokenId, duration);
+
+        if (amountUSDCe > (price.base + price.premium)) {
+            usdcEContract.transferFrom(
+                address(this),
+                msg.sender,
+                amountUSDCe - (price.base + price.premium)
+            );
+        }
+
+        emit NameRenewed(name, labelhash, amountUSDCe, expires);
+    }
+
+    function renew(
+        string calldata name,
+        uint256 duration
+    ) external payable override {
+        bytes32 labelhash = keccak256(bytes(name));
+        uint256 tokenId = uint256(labelhash);
+        IPriceOracle.Price memory price = rentPrice(name, duration);
+        if (msg.value < price.base) {
+            revert InsufficientValue();
+        }
+        uint256 expires = nameWrapper.renew(tokenId, duration);
+
+        if (msg.value > price.base) {
+            payable(msg.sender).transfer(msg.value - price.base);
+        }
+
+        emit NameRenewed(name, labelhash, msg.value, expires);
+    }
+
+    function withdraw() public {
+        payable(owner()).transfer(address(this).balance);
+    }
+
+    function withdrawUSDCe() public {
+        IERC20 usdcEContract = IERC20(usdcEAddress);
+
+        uint256 amountUSDCe = usdcEContract.balanceOf(address(this));
+
+        bool isApproved = usdcEContract.approve(address(this), amountUSDCe);
+
+        require(isApproved, "Approved denied");
+
+        bool transferSuccess = usdcEContract.transferFrom(
+            address(this),
+            owner(),
+            amountUSDCe
+        );
+
+        require(transferSuccess, "Transfer failed");
+    }
+
+    function supportsInterface(
+        bytes4 interfaceID
+    ) external pure returns (bool) {
+        return
+            interfaceID == type(IERC165).interfaceId ||
+            interfaceID == type(IETHRegistrarController).interfaceId;
+    }
+
+    /* Internal functions */
+
+    function _emitRegisteredDomain(
+        string calldata name,
+        address owner,
+        IPriceOracle.Price memory price,
+        uint256 expires
+    ) internal {
+        emit NameRegistered(
+            name,
+            keccak256(bytes(name)),
+            owner,
+            price.base,
+            price.premium,
+            expires
+        );
+    }
+
+    function _register(
+        string calldata name,
+        address owner,
+        uint256 duration,
+        bytes32 secret,
+        address resolver,
+        bytes[] calldata data,
+        bool reverseRecord,
+        uint16 ownerControlledFuses
+    ) internal returns (uint256) {
         _consumeCommitment(
             name,
             duration,
@@ -191,54 +387,8 @@ contract ETHRegistrarController is
             _setReverseRecord(name, resolver, msg.sender);
         }
 
-        emit NameRegistered(
-            name,
-            keccak256(bytes(name)),
-            owner,
-            price.base,
-            price.premium,
-            expires
-        );
-
-        if (msg.value > (price.base + price.premium)) {
-            payable(msg.sender).transfer(
-                msg.value - (price.base + price.premium)
-            );
-        }
+        return expires;
     }
-
-    function renew(
-        string calldata name,
-        uint256 duration
-    ) external payable override {
-        bytes32 labelhash = keccak256(bytes(name));
-        uint256 tokenId = uint256(labelhash);
-        IPriceOracle.Price memory price = rentPrice(name, duration);
-        if (msg.value < price.base) {
-            revert InsufficientValue();
-        }
-        uint256 expires = nameWrapper.renew(tokenId, duration);
-
-        if (msg.value > price.base) {
-            payable(msg.sender).transfer(msg.value - price.base);
-        }
-
-        emit NameRenewed(name, labelhash, msg.value, expires);
-    }
-
-    function withdraw() public {
-        payable(owner()).transfer(address(this).balance);
-    }
-
-    function supportsInterface(
-        bytes4 interfaceID
-    ) external pure returns (bool) {
-        return
-            interfaceID == type(IERC165).interfaceId ||
-            interfaceID == type(IETHRegistrarController).interfaceId;
-    }
-
-    /* Internal functions */
 
     function _consumeCommitment(
         string memory name,
@@ -270,7 +420,7 @@ contract ETHRegistrarController is
         bytes32 label,
         bytes[] calldata data
     ) internal {
-        // use hardcoded .eth namehash
+        // use hardcoded .wbt namehash
         bytes32 nodehash = keccak256(abi.encodePacked(ETH_NODE, label));
         Resolver resolver = Resolver(resolverAddress);
         resolver.multicallWithNodeCheck(nodehash, data);
@@ -285,7 +435,7 @@ contract ETHRegistrarController is
             msg.sender,
             owner,
             resolver,
-            string.concat(name, ".eth")
+            string.concat(name, ".wbt")
         );
     }
 }
