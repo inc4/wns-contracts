@@ -7,9 +7,9 @@ import {BytesUtils} from "../BytesUtils.sol";
 
 contract TestUnwrap is Ownable {
     using BytesUtils for bytes;
-
+    // namehash of wbt
     bytes32 private constant ETH_NODE =
-        0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae;
+        0xfc97184b4cad3ee23a98f70b5e40845bfde0e68147e57dfac1d04a3016c10a5d;
 
     ENS public immutable ens;
     IBaseRegistrar public immutable registrar;
