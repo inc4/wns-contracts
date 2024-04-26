@@ -26,7 +26,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts()
 
   let oracleAddress = process.env.ORACLE_ADDRESS
-  if (network.name !== 'mainnet') {
+  if (network.name !== 'white_chain_mainnet') {
     const dummyOracle = await deploy('DummyOracle', {
       from: deployer,
       args: [process.env.DUMMY_ORACLE_PRICE],
@@ -34,7 +34,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     })
     oracleAddress = dummyOracle.address
   }
-  console.log('🚀 - oracleAddress:', oracleAddress)
 
   await deploy('ExponentialPremiumPriceOracle', {
     from: deployer,

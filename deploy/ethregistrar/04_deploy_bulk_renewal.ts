@@ -26,7 +26,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   })
 
   // Only attempt to make resolver etc changes directly on testnets
-  if (network.name === 'mainnet') return
+  if (network.name === 'white_chain_mainnet') return
 
   const artifact = await deployments.getArtifact('IBulkRenewal')
   const interfaceId = computeInterfaceId(new Interface(artifact.abi))

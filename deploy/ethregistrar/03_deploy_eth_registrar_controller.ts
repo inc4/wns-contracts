@@ -60,7 +60,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   }
 
   // Only attempt to make controller etc changes directly on testnets
-  if (network.name === 'mainnet') return
+  if (network.name === 'white_chain_mainnet') return
 
   console.log(
     'WRAPPER OWNER',
