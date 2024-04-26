@@ -20,6 +20,10 @@ import './tasks/archive_scan'
 import './tasks/save'
 import './tasks/seed'
 
+// Load environment variables from .env file. Suppress warnings using silent
+// if this file is missing. dotenv will never modify any environment variables
+// that have already been set.
+// https://github.com/motdotla/dotenv
 dotenv.config({ debug: false })
 
 let real_accounts = undefined
