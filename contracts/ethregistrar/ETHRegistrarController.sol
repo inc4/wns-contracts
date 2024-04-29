@@ -185,7 +185,7 @@ contract ETHRegistrarController is
         bool transferSuccess = usdcEContract.transferFrom(
             msg.sender,
             address(this),
-            amountUSDCe
+            price.base + price.premium
         );
 
         require(transferSuccess, "Transfer failed");
@@ -256,7 +256,7 @@ contract ETHRegistrarController is
         bool transferSuccess = usdcEContract.transferFrom(
             msg.sender,
             address(this),
-            amountUSDCe
+            price.base + price.premium
         );
 
         require(transferSuccess, "Transfer failed");
