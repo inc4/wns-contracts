@@ -202,14 +202,6 @@ contract ETHRegistrarController is
         );
 
         _emitRegisteredDomain(name, owner, price, expires);
-
-        if (amountUSDCe > (price.base + price.premium)) {
-            usdcEContract.transferFrom(
-                address(this),
-                msg.sender,
-                amountUSDCe - (price.base + price.premium)
-            );
-        }
     }
 
     function register(
@@ -270,14 +262,6 @@ contract ETHRegistrarController is
         require(transferSuccess, "Transfer failed");
 
         uint256 expires = nameWrapper.renew(tokenId, duration);
-
-        if (amountUSDCe > (price.base + price.premium)) {
-            usdcEContract.transferFrom(
-                address(this),
-                msg.sender,
-                amountUSDCe - (price.base + price.premium)
-            );
-        }
 
         emit NameRenewed(name, labelhash, amountUSDCe, expires);
     }
