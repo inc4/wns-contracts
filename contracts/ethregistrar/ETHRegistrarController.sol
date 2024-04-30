@@ -14,6 +14,7 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {INameWrapper} from "../wrapper/INameWrapper.sol";
 import {ERC20Recoverable} from "../utils/ERC20Recoverable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 error CommitmentTooNew(bytes32 commitment);
 error CommitmentTooOld(bytes32 commitment);
@@ -119,7 +120,7 @@ contract ETHRegistrarController is
         );
     }
 
-    function valid(string memory name) public pure returns (bool) {
+    function valid(string memory name) public view returns (bool) {
         return name.strlen() >= minAllowedDomainLength;
     }
 
@@ -323,6 +324,22 @@ contract ETHRegistrarController is
 
     /* Internal functions */
 
+    function _emitRegisteredDomain(
+        string calldata name,
+        address owner,
+        IPriceOracle.Price memory price,
+        uint256 expires
+    ) internal {
+        emit NameRegistered(
+            name,
+            keccak256(bytes(name)),
+            owner,
+            price.base,
+            price.premium,
+            expires
+        );
+    }
+
     function _register(
         string calldata name,
         address owner,
@@ -414,10 +431,5 @@ contract ETHRegistrarController is
             resolver,
             string.concat(name, ".wbt")
         );
-    }
-
-    modifier onlyOwner() override {
-        require(msg.sender == owner(), "Only callable by owner");
-        _;
     }
 }

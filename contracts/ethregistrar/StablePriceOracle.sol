@@ -5,16 +5,15 @@ import "./IPriceOracle.sol";
 import "./StringUtils.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 interface AggregatorInterface {
     function latestAnswer() external view returns (int256);
 }
 
 // StablePriceOracle sets a price in USD, based on an oracle.
-contract StablePriceOracle is IPriceOracle {
+contract StablePriceOracle is Ownable, IPriceOracle {
     using StringUtils for *;
-
-    address internal owner;
 
     // Rent in base price units by length
     uint256 public price1Letter;
@@ -30,7 +29,6 @@ contract StablePriceOracle is IPriceOracle {
     event RentPriceChanged(uint256[] prices);
 
     constructor(AggregatorInterface _usdOracle, uint256[] memory _rentPrices) {
-        owner = msg.sender;
         usdOracle = _usdOracle;
         price1Letter = _rentPrices[0];
         price2Letter = _rentPrices[1];
@@ -145,10 +143,5 @@ contract StablePriceOracle is IPriceOracle {
         }
 
         return basePrice;
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Only callable by owner");
-        _;
     }
 }
