@@ -22,24 +22,20 @@ const startPremiumPrice = process.env.START_PREMIUM_PRICE
 const totalDaysForDutchAuction = process.env.TOTAL_DAYS_FOR_DUTCH_AUCTION
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const { getNamedAccounts, deployments, network } = hre
+  const { getNamedAccounts, deployments } = hre
   const { deploy } = deployments
   const { deployer } = await getNamedAccounts()
 
-  let oracleAddress = process.env.ORACLE_ADDRESS
-  if (network.name !== 'white_chain_mainnet') {
-    const dummyOracle = await deploy('DummyOracle', {
-      from: deployer,
-      args: [process.env.DUMMY_ORACLE_PRICE],
-      log: true,
-    })
-    oracleAddress = dummyOracle.address
-  }
+  const priceOracle = await deploy('PriceOracle', {
+    from: deployer,
+    args: [process.env.DUMMY_ORACLE_PRICE],
+    log: true,
+  })
 
   await deploy('ExponentialPremiumPriceOracle', {
     from: deployer,
     args: [
-      oracleAddress,
+      priceOracle.address,
       [
         price1Letter,
         price2LetterPerSeconds,
@@ -66,7 +62,7 @@ function calculateRentPricePerSecondInAttoUSD(amountInUSD: string): string {
 }
 
 func.id = 'price-oracle'
-func.tags = ['ethregistrar', 'ExponentialPremiumPriceOracle', 'DummyOracle']
+func.tags = ['ethregistrar', 'ExponentialPremiumPriceOracle', 'PriceOracle']
 func.dependencies = ['registry']
 
 export default func
