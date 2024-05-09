@@ -20,6 +20,8 @@ const price6LetterPerSeconds = calculateRentPricePerSecondInAttoUSD(
 )
 const startPremiumPrice = process.env.START_PREMIUM_PRICE
 const totalDaysForDutchAuction = process.env.TOTAL_DAYS_FOR_DUTCH_AUCTION
+const priceOracleOperatorAddress = process.env.PRICE_ORACLE_OPERATOR_ADDRESS
+const startOraclePrice = process.env.START_ORACLE_PRICE // fetch functions
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { getNamedAccounts, deployments } = hre
@@ -28,7 +30,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const priceOracle = await deploy('PriceOracle', {
     from: deployer,
-    args: [process.env.DUMMY_ORACLE_PRICE],
+    args: [startOraclePrice, priceOracleOperatorAddress],
     log: true,
   })
 
