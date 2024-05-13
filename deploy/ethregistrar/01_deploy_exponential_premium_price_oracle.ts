@@ -36,7 +36,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       error,
     )
     console.log(
-      `default price set like start price for the contract constructor PriceOracle. default price: ${process.env.DEFAULT_ORACLE_PRICE}.`,
+      `default price set as start price for the contract constructor PriceOracle. default price: ${process.env.DEFAULT_ORACLE_PRICE}.`,
     )
     startPrice = process.env.DEFAULT_ORACLE_PRICE
   }
@@ -89,12 +89,12 @@ async function getStartPrice(): Promise<BigInt> {
   const json = await resp.json()
   if (!('whitebit' in json)) {
     throw new Error(
-      'Failed to get price, whitebit price not exist in json response.',
+      'failed to get price, whitebit price not exist in json response.',
     )
   }
   if (!('usd' in json.whitebit)) {
     throw new Error(
-      'Failed to get price, usd price for whitebit not exist in json response.',
+      'failed to get price, usd price for whitebit not exist in json response.',
     )
   }
   return BigInt(BigNumber(json.whitebit.usd).multipliedBy(1e8).toString())
