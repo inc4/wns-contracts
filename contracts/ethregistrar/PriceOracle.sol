@@ -16,7 +16,7 @@ contract PriceOracle is Ownable {
         return wbtPriceToUSD;
     }
 
-    function set(uint256 _value) public onlyOperator {
+    function setUSDPrice(uint256 _value) public onlyOperator {
         wbtPriceToUSD = _value;
     }
 

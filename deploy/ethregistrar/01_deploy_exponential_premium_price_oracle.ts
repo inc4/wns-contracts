@@ -26,8 +26,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { getNamedAccounts, deployments } = hre
   const { deploy } = deployments
   const { deployer } = await getNamedAccounts()
+  let startPrice
 
-  const startPrice = await getStartPrice()
+  try {
+    startPrice = await getStartPrice()
+  } catch (error) {
+    console.log(
+      'error with getting price for setting the start price in the contract constructor PriceOracle.',
+      error,
+    )
+    console.log(
+      `default price set like start price for the contract constructor PriceOracle. default price: ${process.env.DEFAULT_ORACLE_PRICE}.`,
+    )
+    startPrice = process.env.DEFAULT_ORACLE_PRICE
+  }
 
   const priceOracle = await deploy('PriceOracle', {
     from: deployer,
@@ -67,12 +79,24 @@ function calculateRentPricePerSecondInAttoUSD(amountInUSD: string): string {
 async function getStartPrice(): Promise<BigInt> {
   const url =
     `https://${process.env.COIN_GECKO_API_DOMAIN}/api/v3/simple/price?` +
-    `ids=whitebit&vs_currencies=usd&x_cg_demo_api_key=${process.env.COIN_GECKO_API_KEY}`
+    `ids=whitebit&vs_currencies=usd&x_cg_pro_api_key=${process.env.COIN_GECKO_API_KEY}`
+
   const resp = await fetch(url)
   if (!resp.ok) {
     throw new Error('failed to fetch price: ' + resp.statusText)
   }
+
   const json = await resp.json()
+  if (!('whitebit' in json)) {
+    throw new Error(
+      'Failed to get price, whitebit price not exist in json response.',
+    )
+  }
+  if (!('usd' in json.whitebit)) {
+    throw new Error(
+      'Failed to get price, usd price for whitebit not exist in json response.',
+    )
+  }
   return BigInt(BigNumber(json.whitebit.usd).multipliedBy(1e8).toString())
 }
 
