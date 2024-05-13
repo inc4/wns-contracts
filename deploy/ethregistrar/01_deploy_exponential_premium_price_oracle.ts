@@ -18,28 +18,39 @@ const price5LetterPerSeconds = calculateRentPricePerSecondInAttoUSD(
 const price6LetterPerSeconds = calculateRentPricePerSecondInAttoUSD(
   process.env.PRICE_6_LETTER!,
 )
-const startPremiumPrice = process.env.START_PREMIUM_PRICE
-const totalDaysForDutchAuction = process.env.TOTAL_DAYS_FOR_DUTCH_AUCTION
+const START_PREMIUM_PRICE = process.env.START_PREMIUM_PRICE
+const TOTAL_DAYS_FOR_DUTCH_AUCTION = process.env.TOTAL_DAYS_FOR_DUTCH_AUCTION
+const PRICE_ORACLE_OPERATOR_ADDRESS = process.env.PRICE_ORACLE_OPERATOR_ADDRESS
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const { getNamedAccounts, deployments, network } = hre
+  const { getNamedAccounts, deployments } = hre
   const { deploy } = deployments
   const { deployer } = await getNamedAccounts()
+  let startPrice
 
-  let oracleAddress = process.env.ORACLE_ADDRESS
-  if (network.name !== 'white_chain_mainnet') {
-    const dummyOracle = await deploy('DummyOracle', {
-      from: deployer,
-      args: [process.env.DUMMY_ORACLE_PRICE],
-      log: true,
-    })
-    oracleAddress = dummyOracle.address
+  try {
+    startPrice = await getStartPrice()
+  } catch (error) {
+    console.log(
+      'error with getting price for setting the start price in the contract constructor PriceOracle.',
+      error,
+    )
+    console.log(
+      `default price set as start price for the contract constructor PriceOracle. default price: ${process.env.DEFAULT_ORACLE_PRICE}.`,
+    )
+    startPrice = process.env.DEFAULT_ORACLE_PRICE
   }
+
+  const priceOracle = await deploy('PriceOracle', {
+    from: deployer,
+    args: [startPrice, PRICE_ORACLE_OPERATOR_ADDRESS],
+    log: true,
+  })
 
   await deploy('ExponentialPremiumPriceOracle', {
     from: deployer,
     args: [
-      oracleAddress,
+      priceOracle.address,
       [
         price1Letter,
         price2LetterPerSeconds,
@@ -48,8 +59,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         price5LetterPerSeconds,
         price6LetterPerSeconds,
       ],
-      startPremiumPrice,
-      totalDaysForDutchAuction,
+      START_PREMIUM_PRICE,
+      TOTAL_DAYS_FOR_DUTCH_AUCTION,
     ],
     log: true,
   })
@@ -65,8 +76,32 @@ function calculateRentPricePerSecondInAttoUSD(amountInUSD: string): string {
   return rentPricePerSecond.toFixed(0).toString()
 }
 
+async function getStartPrice(): Promise<BigInt> {
+  const url =
+    `https://${process.env.COIN_GECKO_API_DOMAIN}/api/v3/simple/price?` +
+    `ids=whitebit&vs_currencies=usd&x_cg_pro_api_key=${process.env.COIN_GECKO_API_KEY}`
+
+  const resp = await fetch(url)
+  if (!resp.ok) {
+    throw new Error('failed to fetch price: ' + resp.statusText)
+  }
+
+  const json = await resp.json()
+  if (!('whitebit' in json)) {
+    throw new Error(
+      'failed to get price, whitebit price not exist in json response.',
+    )
+  }
+  if (!('usd' in json.whitebit)) {
+    throw new Error(
+      'failed to get price, usd price for whitebit not exist in json response.',
+    )
+  }
+  return BigInt(BigNumber(json.whitebit.usd).multipliedBy(1e8).toString())
+}
+
 func.id = 'price-oracle'
-func.tags = ['ethregistrar', 'ExponentialPremiumPriceOracle', 'DummyOracle']
+func.tags = ['ethregistrar', 'ExponentialPremiumPriceOracle', 'PriceOracle']
 func.dependencies = ['registry']
 
 export default func
