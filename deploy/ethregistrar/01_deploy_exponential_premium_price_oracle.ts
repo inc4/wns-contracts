@@ -76,10 +76,10 @@ function calculateRentPricePerSecondInAttoUSD(amountInUSD: string): string {
   return rentPricePerSecond.toFixed(0).toString()
 }
 
-async function getStartPrice(): Promise<BigInt> {
+async function getStartPrice(): Promise<string> {
   const url =
     `https://${process.env.COIN_GECKO_API_DOMAIN}/api/v3/simple/price?` +
-    `ids=whitebit&vs_currencies=usd&x_cg_pro_api_key=${process.env.COIN_GECKO_API_KEY}`
+    `ids=whitebit&vs_currencies=usd&${process.env.COIN_GECKO_API_KEY_HEADER}=${process.env.COIN_GECKO_API_KEY}`
 
   const resp = await fetch(url)
   if (!resp.ok) {
@@ -97,7 +97,7 @@ async function getStartPrice(): Promise<BigInt> {
       'failed to get price, usd price for whitebit not exist in json response.',
     )
   }
-  return BigInt(BigNumber(json.whitebit.usd).multipliedBy(1e8).toString())
+  return BigNumber(json.whitebit.usd).multipliedBy(1e8).toString()
 }
 
 func.id = 'price-oracle'
