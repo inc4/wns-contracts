@@ -79,7 +79,7 @@ function calculateRentPricePerSecondInAttoUSD(amountInUSD: string): string {
 async function getStartPrice(): Promise<string> {
   const url =
     `https://${process.env.COIN_GECKO_API_DOMAIN}/api/v3/simple/price?` +
-    `ids=whitebit&vs_currencies=usd&${process.env.COIN_GECKO_API_PATH}=${process.env.COIN_GECKO_API_KEY}`
+    `ids=whitebit&vs_currencies=usd&${process.env.COIN_GECKO_API_KEY_HEADER}=${process.env.COIN_GECKO_API_KEY}`
 
   const resp = await fetch(url)
   if (!resp.ok) {
