@@ -5,6 +5,8 @@ const { exceptions } = require('../test-utils')
 const sha3 = require('web3-utils').sha3
 const namehash = require('eth-ens-namehash')
 
+const WBT_TLD = 'wbt'
+
 contract('FIFSRegistrar', function (accounts) {
   let registrar, ens
 
@@ -16,24 +18,28 @@ contract('FIFSRegistrar', function (accounts) {
   })
 
   it('should allow registration of names', async () => {
-    await registrar.register(sha3('eth'), accounts[0], { from: accounts[0] })
+    await registrar.register(sha3(WBT_TLD), accounts[0], { from: accounts[0] })
     assert.equal(await ens.owner('0x0'), registrar.address)
-    assert.equal(await ens.owner(namehash.hash('eth')), accounts[0])
+    assert.equal(await ens.owner(namehash.hash(WBT_TLD)), accounts[0])
   })
 
   describe('transferring names', async () => {
     beforeEach(async () => {
-      await registrar.register(sha3('eth'), accounts[0], { from: accounts[0] })
+      await registrar.register(sha3(WBT_TLD), accounts[0], {
+        from: accounts[0],
+      })
     })
 
     it('should allow transferring name to your own', async () => {
-      await registrar.register(sha3('eth'), accounts[1], { from: accounts[0] })
-      assert.equal(await ens.owner(namehash.hash('eth')), accounts[1])
+      await registrar.register(sha3(WBT_TLD), accounts[1], {
+        from: accounts[0],
+      })
+      assert.equal(await ens.owner(namehash.hash(WBT_TLD)), accounts[1])
     })
 
     it('forbids transferring the name you do not own', async () => {
       await exceptions.expectFailure(
-        registrar.register(sha3('eth'), accounts[1], { from: accounts[1] }),
+        registrar.register(sha3(WBT_TLD), accounts[1], { from: accounts[1] }),
       )
     })
   })
