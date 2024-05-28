@@ -8,12 +8,13 @@ const { EMPTY_BYTES32 } = require('../test-utils/constants')
 use(solidity)
 
 const ROOT_NODE = EMPTY_BYTES32
+const WBT_TLD = 'wbt'
 
 describe('ReverseClaimer', () => {
   let EnsRegistry
   let BaseRegistrar
   let NameWrapper
-  let MetaDataservice
+  let MetaDataService
   let signers
   let account
   let account2
@@ -29,7 +30,7 @@ describe('ReverseClaimer', () => {
     BaseRegistrar = await deploy(
       'BaseRegistrarImplementation',
       EnsRegistry.address,
-      namehash('eth'),
+      namehash(WBT_TLD),
     )
 
     await BaseRegistrar.addController(account)
@@ -47,7 +48,7 @@ describe('ReverseClaimer', () => {
       ReverseRegistrar.address,
     )
 
-    MetaDataservice = await deploy(
+    MetaDataService = await deploy(
       'StaticMetadataService',
       'https://ens.domains',
     )
@@ -56,7 +57,7 @@ describe('ReverseClaimer', () => {
       'NameWrapper',
       EnsRegistry.address,
       BaseRegistrar.address,
-      MetaDataservice.address,
+      MetaDataService.address,
     )
   })
 
