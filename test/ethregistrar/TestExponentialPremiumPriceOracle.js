@@ -1,7 +1,12 @@
 const { expect } = require('chai')
 const namehash = require('eth-ens-namehash')
+const { ethers } = require('hardhat')
 const sha3 = require('web3-utils').sha3
 const toBN = require('web3-utils').toBN
+const {
+  contracts: { deploy },
+  prices: { calculateRentPricePerSecondInAttoUSD },
+} = require('../test-utils')
 
 const ENS = artifacts.require('./registry/ENSRegistry')
 const BaseRegistrar = artifacts.require('./BaseRegistrarImplementation')
@@ -14,14 +19,9 @@ const WBT_TLD = 'wbt'
 const START_PRICE = 100000000
 const GRACE_PERIOD = 30
 const ONE_DAY_IN_SEC = 24 * 60 * 60
+const ONE_YEAR_IN_SEC = 24 * 60 * 60 * 365
 const LAST_DAY = 21
 const LAST_VALUE = START_PRICE * 0.5 ** LAST_DAY
-const price1LetterPerSeconds = 0
-const price2LetterPerSeconds = 5
-const price3LetterPerSeconds = 4
-const price4LetterPerSeconds = 3
-const price5LetterPerSeconds = 2
-const price6LetterPerSeconds = 1
 
 function exponentialReduceFloatingPoint(startPrice, days) {
   const premium = startPrice * 0.5 ** days
@@ -32,150 +32,346 @@ function exponentialReduceFloatingPoint(startPrice, days) {
 }
 contract('ExponentialPricePremiumOracle', function (accounts) {
   let priceOracle
+  let ownerAccount
+  let registrantAccount
 
-  before(async () => {
-    ens = await ENS.new()
-    registrar = await BaseRegistrar.new(ens.address, namehash.hash(WBT_TLD))
-    await ens.setSubnodeOwner('0x0', sha3(WBT_TLD), registrar.address)
-    await registrar.addController(accounts[0])
+  describe('Operations for WBT', () => {
+    before(async () => {
+      const price1LetterPerSeconds = 0
+      const price2LetterPerSeconds = 5
+      const price3LetterPerSeconds = 4
+      const price4LetterPerSeconds = 3
+      const price5LetterPerSeconds = 2
+      const price6LetterPerSeconds = 1
 
-    // Dummy oracle with 1 WBT == 2 USD
-    var dummyOracle = await DummyOracle.new(toBN(200000000))
-    // Pricing premium starts out at 100 USD at expiry and decreases to 0 over 100k seconds (a bit over a day)
-    priceOracle = await ExponentialPremiumPriceOracle.new(
-      dummyOracle.address,
-      [
-        price1LetterPerSeconds,
-        price2LetterPerSeconds,
-        price3LetterPerSeconds,
-        price4LetterPerSeconds,
-        price5LetterPerSeconds,
-        price6LetterPerSeconds,
-      ],
-      BigInt(START_PRICE * 1e18),
-      LAST_DAY,
-    )
-  })
+      const ens = await ENS.new()
+      registrar = await BaseRegistrar.new(ens.address, namehash.hash(WBT_TLD))
+      await ens.setSubnodeOwner('0x0', sha3(WBT_TLD), registrar.address)
+      await registrar.addController(accounts[0])
 
-  it('should return correct base prices', async () => {
-    assert.equal(parseInt((await priceOracle.price('foo', 0, 3600)).base), 7200)
-    assert.equal(
-      parseInt((await priceOracle.price('quux', 0, 3600)).base),
-      5400,
-    )
-    assert.equal(
-      parseInt((await priceOracle.price('fubar', 0, 3600)).base),
-      3600,
-    )
-    assert.equal(
-      parseInt((await priceOracle.price('foobie', 0, 3600)).base),
-      1800,
-    )
-  })
+      // Dummy oracle with 1 WBT == 2 USD
+      var dummyOracle = await DummyOracle.new(toBN(200000000))
+      // Pricing premium starts out at 100 USD at expiry and decreases to 0 over 100k seconds (a bit over a day)
+      priceOracle = await ExponentialPremiumPriceOracle.new(
+        dummyOracle.address,
+        [
+          price1LetterPerSeconds,
+          price2LetterPerSeconds,
+          price3LetterPerSeconds,
+          price4LetterPerSeconds,
+          price5LetterPerSeconds,
+          price6LetterPerSeconds,
+        ],
+        BigInt(START_PRICE * 1e18),
+        LAST_DAY,
+      )
+    })
 
-  it('should not specify a premium for first-time registrations', async () => {
-    assert.equal((await priceOracle.premium('foobar', 0, 0)).toNumber(), 0)
-    assert.equal(parseInt((await priceOracle.price('foobar', 0, 0)).base), 0)
-  })
+    it('should return correct base prices', async () => {
+      assert.equal(
+        parseInt((await priceOracle.price('foo', 0, 3600)).base),
+        7200,
+      )
+      assert.equal(
+        parseInt((await priceOracle.price('quux', 0, 3600)).base),
+        5400,
+      )
+      assert.equal(
+        parseInt((await priceOracle.price('fubar', 0, 3600)).base),
+        3600,
+      )
+      assert.equal(
+        parseInt((await priceOracle.price('foobie', 0, 3600)).base),
+        1800,
+      )
+    })
 
-  it('should not specify a premium for renewals', async () => {
-    const ts = (await web3.eth.getBlock('latest')).timestamp
-    assert.equal((await priceOracle.premium('foobar', ts, 0)).toNumber(), 0)
-    assert.equal(parseInt((await priceOracle.price('foobar', ts, 0)).base), 0)
-  })
+    it('should not specify a premium for first-time registrations', async () => {
+      assert.equal((await priceOracle.premium('foobar', 0, 0)).toNumber(), 0)
+      assert.equal(parseInt((await priceOracle.price('foobar', 0, 0)).base), 0)
+    })
 
-  it('should specify the maximum premium at the moment of expiration', async () => {
-    const ts =
-      (await web3.eth.getBlock('latest')).timestamp -
-      GRACE_PERIOD * ONE_DAY_IN_SEC
-    const expectedPrice = ((START_PRICE - LAST_VALUE) / 2) * 1e18 // WBT at $2 for $1 mil in 18 decimal precision
+    it('should not specify a premium for renewals', async () => {
+      const ts = (await web3.eth.getBlock('latest')).timestamp
+      assert.equal((await priceOracle.premium('foobar', ts, 0)).toNumber(), 0)
+      assert.equal(parseInt((await priceOracle.price('foobar', ts, 0)).base), 0)
+    })
 
-    assert.equal(
-      (await priceOracle.premium('foobar', ts, 0)).toString(),
-      expectedPrice,
-    )
-    assert.equal(
-      (await priceOracle.price('foobar', ts, 0)).premium.toString(),
-      expectedPrice,
-    )
-  })
+    it('should specify the maximum premium at the moment of expiration', async () => {
+      const ts =
+        (await web3.eth.getBlock('latest')).timestamp -
+        GRACE_PERIOD * ONE_DAY_IN_SEC
+      const expectedPrice = ((START_PRICE - LAST_VALUE) / 2) * 1e18 // WBT at $2 for $1 mil in 18 decimal precision
 
-  it('should specify the correct price after 2.5 days and 1 year registration', async () => {
-    const ts =
-      (await web3.eth.getBlock('latest')).timestamp -
-      (GRACE_PERIOD * ONE_DAY_IN_SEC + ONE_DAY_IN_SEC * 2.5)
-    const lengthOfRegistration = ONE_DAY_IN_SEC * 365
-    const expectedPremium = (
-      exponentialReduceFloatingPoint(START_PRICE, 2.5) / 2
-    ).toFixed(2)
+      assert.equal(
+        (await priceOracle.premium('foobar', ts, 0)).toString(),
+        expectedPrice,
+      )
+      assert.equal(
+        (await priceOracle.price('foobar', ts, 0)).premium.toString(),
+        expectedPrice,
+      )
+    })
 
-    expect(
-      (
-        Number(await priceOracle.premium('foobar', ts, lengthOfRegistration)) /
-        1e18
-      ).toFixed(2),
-    ).to.equal(expectedPremium)
+    it('should specify the correct price after 2.5 days and 1 year registration', async () => {
+      const ts =
+        (await web3.eth.getBlock('latest')).timestamp -
+        (GRACE_PERIOD * ONE_DAY_IN_SEC + ONE_DAY_IN_SEC * 2.5)
+      const lengthOfRegistration = ONE_DAY_IN_SEC * 365
+      const expectedPremium = (
+        exponentialReduceFloatingPoint(START_PRICE, 2.5) / 2
+      ).toFixed(2)
 
-    expect(
-      (
-        Number(
-          (await priceOracle.price('foobar', ts, lengthOfRegistration)).premium,
-        ) / 1e18
-      ).toFixed(2),
-    ).to.equal(expectedPremium)
-  })
+      expect(
+        (
+          Number(
+            await priceOracle.premium('foobar', ts, lengthOfRegistration),
+          ) / 1e18
+        ).toFixed(2),
+      ).to.equal(expectedPremium)
 
-  it('should produce a 0 premium at the end of the decay period', async () => {
-    let ts =
-      (await web3.eth.getBlock('latest')).timestamp -
-      GRACE_PERIOD * ONE_DAY_IN_SEC
-    expect(
-      (
-        await priceOracle.premium(
-          'foobar',
-          ts - LAST_DAY * ONE_DAY_IN_SEC + 1,
-          0,
-        )
-      ).toNumber(),
-    ).to.be.greaterThan(0)
+      expect(
+        (
+          Number(
+            (await priceOracle.price('foobar', ts, lengthOfRegistration))
+              .premium,
+          ) / 1e18
+        ).toFixed(2),
+      ).to.equal(expectedPremium)
+    })
 
-    expect(
-      (
-        await priceOracle.premium('foobar', ts - LAST_DAY * ONE_DAY_IN_SEC, 0)
-      ).toNumber(),
-    ).to.equal(0)
-  })
+    it('should produce a 0 premium at the end of the decay period', async () => {
+      let ts =
+        (await web3.eth.getBlock('latest')).timestamp -
+        GRACE_PERIOD * ONE_DAY_IN_SEC
+      expect(
+        (
+          await priceOracle.premium(
+            'foobar',
+            ts - LAST_DAY * ONE_DAY_IN_SEC + 1,
+            0,
+          )
+        ).toNumber(),
+      ).to.be.greaterThan(0)
 
-  // This test only runs every hour of each day. For an exhaustive test use the exponentialPremiumScript and uncomment the exhaustive test below
-  it('should not be beyond a certain amount of inaccuracy from floating point calc', async () => {
-    let ts =
-      (await web3.eth.getBlock('latest')).timestamp -
-      GRACE_PERIOD * ONE_DAY_IN_SEC
-    let differencePercentSum = 0
-    let percentMax = 0
+      expect(
+        (
+          await priceOracle.premium('foobar', ts - LAST_DAY * ONE_DAY_IN_SEC, 0)
+        ).toNumber(),
+      ).to.equal(0)
+    })
 
-    const interval = 3600 // 1 hour
-    const offset = 0
-    for (let i = 1814400; i <= 0; i += interval) {
-      const contractResult =
-        Number(await priceOracle.premium('foobar', ts - (i + offset), 0)) / 1e18
+    // This test only runs every hour of each day. For an exhaustive test use the exponentialPremiumScript and uncomment the exhaustive test below
+    it('should not be beyond a certain amount of inaccuracy from floating point calc', async () => {
+      let ts =
+        (await web3.eth.getBlock('latest')).timestamp -
+        GRACE_PERIOD * ONE_DAY_IN_SEC
+      let differencePercentSum = 0
+      let percentMax = 0
 
-      const jsResult =
-        exponentialReduceFloatingPoint(START_PRICE, (i + offset) / 86400) / 2
-      let percent = 0
-      let absoluteDifference
-      if (contractResult !== 0) {
-        absoluteDifference = Math.abs(contractResult - jsResult)
-        percent = Math.abs(absoluteDifference) / jsResult
+      const interval = 3600 // 1 hour
+      const offset = 0
+      for (let i = 1814400; i <= 0; i += interval) {
+        const contractResult =
+          Number(await priceOracle.premium('foobar', ts - (i + offset), 0)) /
+          1e18
+
+        const jsResult =
+          exponentialReduceFloatingPoint(START_PRICE, (i + offset) / 86400) / 2
+        let percent = 0
+        let absoluteDifference
+        if (contractResult !== 0) {
+          absoluteDifference = Math.abs(contractResult - jsResult)
+          percent = Math.abs(absoluteDifference) / jsResult
+        }
+
+        // discounts absolute differences of less than 1c
+        if (percent > percentMax && absoluteDifference > 0.01) {
+          percentMax = percent
+        }
+        differencePercentSum += percent
       }
+      expect(percentMax).to.be.below(0.001) // must be less than 0.1% off JS implementation on an hourly resolution
+    })
+  })
 
-      // discounts absolute differences of less than 1c
-      if (percent > percentMax && absoluteDifference > 0.01) {
-        percentMax = percent
-      }
-      differencePercentSum += percent
-    }
-    expect(percentMax).to.be.below(0.001) // must be less than 0.1% off JS implementation on an hourly resolution
+  describe('Operations for USDC.e', () => {
+    before(async () => {
+      const price1LetterPerSeconds = 0
+      const price2LetterPerSeconds =
+        calculateRentPricePerSecondInAttoUSD('1000')
+      const price3LetterPerSeconds = calculateRentPricePerSecondInAttoUSD('99')
+      const price4LetterPerSeconds = calculateRentPricePerSecondInAttoUSD('49')
+      const price5LetterPerSeconds = calculateRentPricePerSecondInAttoUSD('3')
+      const price6LetterPerSeconds = calculateRentPricePerSecondInAttoUSD('1')
+      const ens = await ENS.new()
+      registrar = await BaseRegistrar.new(ens.address, namehash.hash(WBT_TLD))
+      await ens.setSubnodeOwner('0x0', sha3(WBT_TLD), registrar.address)
+      await registrar.addController(accounts[0])
+
+      // Dummy oracle with 1 WBT == 2 USD
+      var dummyOracle = await DummyOracle.new(toBN(200000000))
+      // Pricing premium starts out at 100 USD at expiry and decreases to 0 over 100k seconds (a bit over a day)
+      priceOracle = await ExponentialPremiumPriceOracle.new(
+        dummyOracle.address,
+        [
+          price1LetterPerSeconds,
+          price2LetterPerSeconds,
+          price3LetterPerSeconds,
+          price4LetterPerSeconds,
+          price5LetterPerSeconds,
+          price6LetterPerSeconds,
+        ],
+        BigInt(START_PRICE * 1e18),
+        LAST_DAY,
+      )
+    })
+
+    it('should return correct base prices', async () => {
+      assert.equal(
+        parseInt((await priceOracle.priceUSDCe('fo', 0, ONE_YEAR_IN_SEC)).base),
+        1000000000,
+      )
+      assert.equal(
+        parseInt(
+          (await priceOracle.priceUSDCe('foo', 0, ONE_YEAR_IN_SEC)).base,
+        ),
+        99000000,
+      )
+      assert.equal(
+        parseInt(
+          (await priceOracle.priceUSDCe('quux', 0, ONE_YEAR_IN_SEC)).base,
+        ),
+        48999999,
+      )
+      assert.equal(
+        parseInt(
+          (await priceOracle.priceUSDCe('fubar', 0, ONE_YEAR_IN_SEC)).base,
+        ),
+        2999999,
+      )
+      assert.equal(
+        parseInt(
+          (await priceOracle.priceUSDCe('foobie', 0, ONE_YEAR_IN_SEC)).base,
+        ),
+        1000000,
+      )
+    })
+
+    it('should not specify a premium for first-time registrations', async () => {
+      assert.equal((await priceOracle.premium('foobar', 0, 0)).toNumber(), 0)
+      assert.equal(
+        parseInt((await priceOracle.priceUSDCe('foobar', 0, 0)).base),
+        0,
+      )
+    })
+
+    it('should not specify a premium for renewals', async () => {
+      const ts = (await web3.eth.getBlock('latest')).timestamp
+      assert.equal((await priceOracle.premium('foobar', ts, 0)).toNumber(), 0)
+      assert.equal(
+        parseInt((await priceOracle.priceUSDCe('foobar', ts, 0)).base),
+        0,
+      )
+    })
+  })
+
+  describe('Operation for price updating', () => {
+    const newPrices = [
+      '0',
+      calculateRentPricePerSecondInAttoUSD('100'),
+      calculateRentPricePerSecondInAttoUSD('9'),
+      calculateRentPricePerSecondInAttoUSD('4'),
+      calculateRentPricePerSecondInAttoUSD('2'),
+      calculateRentPricePerSecondInAttoUSD('1'),
+    ]
+
+    before(async () => {
+      const price1LetterPerSeconds = 0
+      const price2LetterPerSeconds =
+        calculateRentPricePerSecondInAttoUSD('1000')
+      const price3LetterPerSeconds = calculateRentPricePerSecondInAttoUSD('99')
+      const price4LetterPerSeconds = calculateRentPricePerSecondInAttoUSD('49')
+      const price5LetterPerSeconds = calculateRentPricePerSecondInAttoUSD('3')
+      const price6LetterPerSeconds = calculateRentPricePerSecondInAttoUSD('1')
+
+      signers = await ethers.getSigners()
+      ownerAccount = await signers[0].getAddress()
+      registrantAccount = await signers[1].getAddress()
+
+      ens = await deploy('ENSRegistry')
+
+      baseRegistrar = await deploy(
+        'BaseRegistrarImplementation',
+        ens.address,
+        namehash.hash(WBT_TLD),
+      )
+
+      const dummyOracle = await deploy('DummyOracle', '100000000')
+      // Pricing premium starts out at 100 USD at expiry and decreases to 0 over 100k seconds (a bit over a day)
+      priceOracle = await deploy(
+        'ExponentialPremiumPriceOracle',
+        dummyOracle.address,
+        [
+          price1LetterPerSeconds,
+          price2LetterPerSeconds,
+          price3LetterPerSeconds,
+          price4LetterPerSeconds,
+          price5LetterPerSeconds,
+          price6LetterPerSeconds,
+        ],
+        BigInt(START_PRICE * 1e18),
+        LAST_DAY,
+      )
+    })
+    it('should update price by only owner of contract', async () => {
+      await expect(
+        priceOracle.updatePrices(newPrices, { from: registrantAccount }),
+      ).to.be.reverted
+      const tx = await priceOracle.updatePrices(newPrices, {
+        from: ownerAccount,
+      })
+      await expect(tx)
+        .to.emit(priceOracle, 'RentPriceChanged')
+        .withArgs(newPrices)
+    })
+
+    it('should update price correctly', async () => {
+      const tx = await priceOracle.updatePrices(newPrices, {
+        from: ownerAccount,
+      })
+      await expect(tx)
+        .to.emit(priceOracle, 'RentPriceChanged')
+        .withArgs(newPrices)
+      assert.equal(
+        parseInt((await priceOracle.priceUSDCe('fo', 0, ONE_YEAR_IN_SEC)).base),
+        99999999,
+      )
+      assert.equal(
+        parseInt(
+          (await priceOracle.priceUSDCe('foo', 0, ONE_YEAR_IN_SEC)).base,
+        ),
+        9000000,
+      )
+      assert.equal(
+        parseInt(
+          (await priceOracle.priceUSDCe('quux', 0, ONE_YEAR_IN_SEC)).base,
+        ),
+        3999999,
+      )
+      assert.equal(
+        parseInt(
+          (await priceOracle.priceUSDCe('fubar', 0, ONE_YEAR_IN_SEC)).base,
+        ),
+        2000000,
+      )
+      assert.equal(
+        parseInt(
+          (await priceOracle.priceUSDCe('foobie', 0, ONE_YEAR_IN_SEC)).base,
+        ),
+        1000000,
+      )
+    })
   })
 
   /***

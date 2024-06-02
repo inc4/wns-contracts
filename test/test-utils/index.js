@@ -5,4 +5,5 @@ module.exports = {
   ens: require('./ens'),
   reverse: require('./reverse'),
   contracts: require('./contracts'),
+  prices: require('./prices'),
 }
