@@ -10,7 +10,7 @@ const maxCommitmentAge = 86400
 const minAllowedDomainLength = +process.env.MIN_ALLOWED_DOMAIN_LENGTH!
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const { getNamedAccounts, deployments, network } = hre
+  const { getNamedAccounts, deployments } = hre
   const { deploy } = deployments
   const { deployer, owner } = await getNamedAccounts()
 
