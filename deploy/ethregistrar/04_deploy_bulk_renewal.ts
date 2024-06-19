@@ -5,14 +5,8 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types'
 
 const { makeInterfaceId } = require('@openzeppelin/test-helpers')
 
-function computeInterfaceId(iface: Interface) {
-  return makeInterfaceId.ERC165(
-    Object.values(iface.functions).map((frag) => frag.format('sighash')),
-  )
-}
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const { getNamedAccounts, deployments, network } = hre
+  const { getNamedAccounts, deployments } = hre
   const { deploy } = deployments
   const { deployer } = await getNamedAccounts()
 
@@ -24,9 +18,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [controller.address],
     log: true,
   })
-
-  // Only attempt to make resolver etc changes directly on testnets
-  if (network.name === 'white_chain_mainnet') return
 
   const artifact = await deployments.getArtifact('IBulkRenewal')
   const interfaceId = computeInterfaceId(new Interface(artifact.abi))
@@ -58,6 +49,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   )
   await tx.wait()
   return true
+}
+
+function computeInterfaceId(iface: Interface) {
+  return makeInterfaceId.ERC165(
+    Object.values(iface.functions).map((frag) => frag.format('sighash')),
+  )
 }
 
 func.id = 'bulk-renewal'

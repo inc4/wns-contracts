@@ -39,17 +39,13 @@ export const archivedDeploymentPath = './deployments/archive'
 
 const config: HardhatUserConfig = {
   networks: {
-    hardhat: {
-      tags: ['test', 'legacy', 'use_root'],
-    },
+    hardhat: {},
     localhost: {
       url: 'http://127.0.0.1:8545',
-      tags: ['test', 'legacy', 'use_root'],
     },
     white_chain_testnet: {
       url: process.env.WHITE_CHAIN_TESTNET_NETWORK_URL,
       accounts: real_accounts,
-      tags: ['test', 'use_root'],
       chainId: 2625,
     },
   },

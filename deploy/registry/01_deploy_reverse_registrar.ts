@@ -5,7 +5,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { keccak256 } from 'js-sha3'
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const { getNamedAccounts, deployments, network } = hre
+  const { getNamedAccounts, deployments } = hre
   const { deploy } = deployments
   const { deployer, owner } = await getNamedAccounts()
 
@@ -27,9 +27,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     )
     await tx.wait()
   }
-
-  // Only attempt to make controller etc changes directly on testnets
-  if (network.name === 'white_chain_mainnet') return
 
   const root = await ethers.getContract('Root')
 
