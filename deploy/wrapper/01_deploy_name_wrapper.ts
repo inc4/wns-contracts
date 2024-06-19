@@ -16,9 +16,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     owner,
   )
 
+  const metadata = await ethers.getContract('StaticMetadataService', owner)
+
   const deployArgs = {
     from: deployer,
-    args: [registry.address, registrar.address, ethers.constants.AddressZero],
+    args: [registry.address, registrar.address, metadata.address],
     log: true,
   }
 
