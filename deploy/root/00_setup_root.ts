@@ -2,23 +2,16 @@ import { ethers } from 'hardhat'
 import { DeployFunction } from 'hardhat-deploy/types'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 
-const ZERO_HASH =
-  '0x0000000000000000000000000000000000000000000000000000000000000000'
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { getNamedAccounts, deployments, network } = hre
   const { deployer, owner } = await getNamedAccounts()
-
-  if (!network.tags.use_root) {
-    return true
-  }
 
   console.log('Running root setup')
 
   const registry = await ethers.getContract('ENSRegistry')
   const root = await ethers.getContract('Root')
 
-  const tx1 = await registry.setOwner(ZERO_HASH, root.address)
+  const tx1 = await registry.setOwner(ethers.constants.HashZero, root.address)
   console.log(
     `Setting owner of root node to root contract (tx: ${tx1.hash})...`,
   )

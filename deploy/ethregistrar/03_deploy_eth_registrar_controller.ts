@@ -9,12 +9,6 @@ const minCommitmentAge = 60
 const maxCommitmentAge = 86400
 const minAllowedDomainLength = +process.env.MIN_ALLOWED_DOMAIN_LENGTH!
 
-function computeInterfaceId(iface: Interface) {
-  return makeInterfaceId.ERC165(
-    Object.values(iface.functions).map((frag) => frag.format('sighash')),
-  )
-}
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { getNamedAccounts, deployments, network } = hre
   const { deploy } = deployments
@@ -32,7 +26,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   )
   const reverseRegistrar = await ethers.getContract('ReverseRegistrar', owner)
   const nameWrapper = await ethers.getContract('NameWrapper', owner)
-  const ethOwnedResolver = await ethers.getContract('OwnedResolver', owner)
 
   const deployArgs = {
     from: deployer,
@@ -60,9 +53,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     )
     await tx.wait()
   }
-
-  // Only attempt to make controller etc changes directly on testnets
-  if (network.name === 'white_chain_mainnet') return
 
   console.log(
     'WRAPPER OWNER',
@@ -103,6 +93,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     `Setting ETHRegistrarController interface ID ${interfaceId} on .wbt resolver (tx: ${tx3.hash})...`,
   )
   await tx3.wait()
+}
+
+function computeInterfaceId(iface: Interface) {
+  return makeInterfaceId.ERC165(
+    Object.values(iface.functions).map((frag) => frag.format('sighash')),
+  )
 }
 
 func.id = 'controller'

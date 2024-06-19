@@ -28,9 +28,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     await tx.wait()
   }
 
-  // Only attempt to make controller etc changes directly on testnets
-  if (network.name === 'white_chain_mainnet') return
-
   const root = await ethers.getContract('Root')
 
   const tx1 = await root

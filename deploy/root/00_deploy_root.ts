@@ -7,10 +7,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments
   const { deployer, owner } = await getNamedAccounts()
 
-  if (!network.tags.use_root) {
-    return true
-  }
-
   const registry = await ethers.getContract('ENSRegistry')
 
   await deploy('Root', {

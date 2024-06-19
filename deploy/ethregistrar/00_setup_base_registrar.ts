@@ -8,10 +8,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { getNamedAccounts, deployments, network } = hre
   const { deployer, owner } = await getNamedAccounts()
 
-  if (!network.tags.use_root) {
-    return true
-  }
-
   const root = await ethers.getContract('Root')
   const registrar = await ethers.getContract('BaseRegistrarImplementation')
 

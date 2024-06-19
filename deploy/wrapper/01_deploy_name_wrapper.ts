@@ -5,12 +5,6 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types'
 
 const { makeInterfaceId } = require('@openzeppelin/test-helpers')
 
-function computeInterfaceId(iface: Interface) {
-  return makeInterfaceId.ERC165(
-    Object.values(iface.functions).map((frag) => frag.format('sighash')),
-  )
-}
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { getNamedAccounts, deployments, network } = hre
   const { deploy } = deployments
@@ -21,11 +15,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     'BaseRegistrarImplementation',
     owner,
   )
-  const metadata = await ethers.getContract('StaticMetadataService', owner)
 
   const deployArgs = {
     from: deployer,
-    args: [registry.address, registrar.address, metadata.address],
+    args: [registry.address, registrar.address, ethers.constants.AddressZero],
     log: true,
   }
 
@@ -40,9 +33,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     )
     await tx.wait()
   }
-
-  // Only attempt to make controller etc changes directly on testnets
-  if (network.name === 'white_chain_mainnet') return
 
   const tx2 = await registrar.addController(nameWrapper.address)
   console.log(
@@ -71,6 +61,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     `Setting NameWrapper interface ID ${interfaceId} on .wbt resolver (tx: ${tx3.hash})...`,
   )
   await tx3.wait()
+}
+
+function computeInterfaceId(iface: Interface) {
+  return makeInterfaceId.ERC165(
+    Object.values(iface.functions).map((frag) => frag.format('sighash')),
+  )
 }
 
 func.id = 'name-wrapper'

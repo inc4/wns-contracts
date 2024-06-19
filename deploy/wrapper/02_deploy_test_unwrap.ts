@@ -23,9 +23,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     ...unnamedAccounts,
   ]
 
-  // only deploy on testnets
-  if (network.name === 'white_chain_mainnet') return
-
   const registry = await ethers.getContract('ENSRegistry', owner)
   const registrar = await ethers.getContract(
     'BaseRegistrarImplementation',
