@@ -1,3 +1,4 @@
+const { ethers } = require('hardhat')
 const ENS = artifacts.require('./registry/ENSRegistry')
 const BaseRegistrar = artifacts.require(
   './registrar/BaseRegistrarImplementation',
@@ -11,9 +12,8 @@ const { evm, exceptions } = require('../test-utils')
 
 const ONE_DAY_IN_SEC = 24 * 60 * 60
 const WBT_TLD = 'wbt'
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
-const ZERO_HASH =
-  '0x0000000000000000000000000000000000000000000000000000000000000000'
+const ZERO_ADDRESS = ethers.constants.AddressZero
+const ZERO_HASH = ethers.constants.HashZero
 
 contract('BaseRegistrar', function (accounts) {
   const ownerAccount = accounts[0]

@@ -39,12 +39,17 @@ export const archivedDeploymentPath = './deployments/archive'
 
 const config: HardhatUserConfig = {
   networks: {
-    hardhat: {},
+    hardhat: {
+      forking: {
+        url: process.env.WHITE_CHAIN_TESTNET_NETWORK_URL!,
+        blockNumber: 19265559,
+      },
+    },
     localhost: {
       url: 'http://127.0.0.1:8545',
     },
     white_chain_testnet: {
-      url: process.env.WHITE_CHAIN_TESTNET_NETWORK_URL,
+      url: process.env.WHITE_CHAIN_TESTNET_NETWORK_URL!,
       accounts: real_accounts,
       chainId: 2625,
     },
