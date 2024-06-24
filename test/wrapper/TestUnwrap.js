@@ -9,7 +9,9 @@ use(solidity)
 
 const ROOT_NODE = EMPTY_BYTES32
 
-const DAY = 86400
+const ONE_DAY_IN_SEC = 86400
+
+const WBT_TLD = 'wbt'
 
 const { CANNOT_UNWRAP, CAN_DO_EVERYTHING } = FUSES
 
@@ -18,7 +20,7 @@ describe('TestUnwrap', () => {
   let BaseRegistrar
   let NameWrapper
   let TestUnwrap
-  let MetaDataservice
+  let MetaDataService
   let signers
   let account
   let account2
@@ -35,7 +37,7 @@ describe('TestUnwrap', () => {
     BaseRegistrar = await deploy(
       'BaseRegistrarImplementation',
       EnsRegistry.address,
-      namehash('eth'),
+      namehash(WBT_TLD),
     )
 
     await BaseRegistrar.addController(account)
@@ -53,7 +55,7 @@ describe('TestUnwrap', () => {
       ReverseRegistrar.address,
     )
 
-    MetaDataservice = await deploy(
+    MetaDataService = await deploy(
       'StaticMetadataService',
       'https://ens.domains',
     )
@@ -62,7 +64,7 @@ describe('TestUnwrap', () => {
       'NameWrapper',
       EnsRegistry.address,
       BaseRegistrar.address,
-      MetaDataservice.address,
+      MetaDataService.address,
     )
 
     TestUnwrap = await deploy(
@@ -71,15 +73,15 @@ describe('TestUnwrap', () => {
       BaseRegistrar.address,
     )
 
-    // setup .eth
+    // setup .wbt
     await EnsRegistry.setSubnodeOwner(
       ROOT_NODE,
-      labelhash('eth'),
+      labelhash(WBT_TLD),
       BaseRegistrar.address,
     )
 
-    //make sure base registrar is owner of eth TLD
-    expect(await EnsRegistry.owner(namehash('eth'))).to.equal(
+    //make sure base registrar is owner of wbt TLD
+    expect(await EnsRegistry.owner(namehash(WBT_TLD))).to.equal(
       BaseRegistrar.address,
     )
   })
@@ -92,14 +94,14 @@ describe('TestUnwrap', () => {
   })
 
   describe('wrapFromUpgrade()', () => {
-    describe('.eth', () => {
-      const encodedName = encodeName('wrapped.eth')
+    describe('.wbt', () => {
+      const encodedName = encodeName(`wrapped.${WBT_TLD}`)
       const label = 'wrapped'
       const labelHash = labelhash(label)
-      const nameHash = namehash(label + '.eth')
+      const nameHash = namehash(label + `.${WBT_TLD}`)
 
       it('allows unwrapping from an approved NameWrapper', async () => {
-        await BaseRegistrar.register(labelHash, account, 1 * DAY)
+        await BaseRegistrar.register(labelHash, account, 1 * ONE_DAY_IN_SEC)
         await BaseRegistrar.setApprovalForAll(NameWrapper.address, true)
 
         expect(await NameWrapper.ownerOf(nameHash)).to.equal(EMPTY_ADDRESS)
@@ -130,7 +132,7 @@ describe('TestUnwrap', () => {
         expect(await NameWrapper.ownerOf(nameHash)).to.equal(EMPTY_ADDRESS)
       })
       it('does not allow unwrapping from an unapproved NameWrapper', async () => {
-        await BaseRegistrar.register(labelHash, account, 1 * DAY)
+        await BaseRegistrar.register(labelHash, account, 1 * ONE_DAY_IN_SEC)
         await BaseRegistrar.nameExpires(labelHash)
         await BaseRegistrar.setApprovalForAll(NameWrapper.address, true)
 
@@ -159,7 +161,7 @@ describe('TestUnwrap', () => {
         )
       })
       it('does not allow unwrapping from an unapproved sender', async () => {
-        await BaseRegistrar.register(labelHash, account, 1 * DAY)
+        await BaseRegistrar.register(labelHash, account, 1 * ONE_DAY_IN_SEC)
         await BaseRegistrar.nameExpires(labelHash)
         await BaseRegistrar.setApprovalForAll(NameWrapper.address, true)
 
@@ -199,15 +201,19 @@ describe('TestUnwrap', () => {
     describe('other', () => {
       const label = 'to-upgrade'
       const parentLabel = 'wrapped2'
-      const name = label + '.' + parentLabel + '.eth'
+      const name = label + '.' + parentLabel + `.${WBT_TLD}`
       const parentLabelHash = labelhash(parentLabel)
-      const parentHash = namehash(parentLabel + '.eth')
+      const parentHash = namehash(parentLabel + `.${WBT_TLD}`)
       const nameHash = namehash(name)
       const encodedName = encodeName(name)
       it('allows unwrapping from an approved NameWrapper', async () => {
         await EnsRegistry.setApprovalForAll(NameWrapper.address, true)
         await BaseRegistrar.setApprovalForAll(NameWrapper.address, true)
-        await BaseRegistrar.register(parentLabelHash, account, 1 * DAY)
+        await BaseRegistrar.register(
+          parentLabelHash,
+          account,
+          1 * ONE_DAY_IN_SEC,
+        )
         await NameWrapper.wrapETH2LD(
           parentLabel,
           account,
@@ -235,7 +241,11 @@ describe('TestUnwrap', () => {
       it('does not allow unwrapping from an unapproved NameWrapper', async () => {
         await EnsRegistry.setApprovalForAll(NameWrapper.address, true)
         await BaseRegistrar.setApprovalForAll(NameWrapper.address, true)
-        await BaseRegistrar.register(parentLabelHash, account, 1 * DAY)
+        await BaseRegistrar.register(
+          parentLabelHash,
+          account,
+          1 * ONE_DAY_IN_SEC,
+        )
         await NameWrapper.wrapETH2LD(
           parentLabel,
           account,
@@ -262,7 +272,11 @@ describe('TestUnwrap', () => {
       it('does not allow unwrapping from an unapproved sender', async () => {
         await EnsRegistry.setApprovalForAll(NameWrapper.address, true)
         await BaseRegistrar.setApprovalForAll(NameWrapper.address, true)
-        await BaseRegistrar.register(parentLabelHash, account, 1 * DAY)
+        await BaseRegistrar.register(
+          parentLabelHash,
+          account,
+          1 * ONE_DAY_IN_SEC,
+        )
         await NameWrapper.wrapETH2LD(
           parentLabel,
           account,

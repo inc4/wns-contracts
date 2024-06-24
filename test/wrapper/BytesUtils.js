@@ -6,6 +6,7 @@ const namehash = require('eth-ens-namehash').hash
 
 const NULL_HASH =
   '0x0000000000000000000000000000000000000000000000000000000000000000'
+const WBT_TLD = 'wbt'
 
 function encodeName(name) {
   return '0x' + packet.name.encode(name).toString('hex')
@@ -25,19 +26,28 @@ describe('BytesUtils', () => {
 
   describe('readLabel()', () => {
     it('Reads the first label from a name', async () => {
-      let [hash, offset] = await BytesUtils.readLabel(encodeName('test.tld'), 0)
+      let [hash, offset] = await BytesUtils.readLabel(
+        encodeName(`test.${WBT_TLD}`),
+        0,
+      )
       expect(hash).to.equal(labelhash('test'))
       expect(offset.toNumber()).to.equal(5)
     })
 
     it('Reads subsequent labels from a name', async () => {
-      let [hash, offset] = await BytesUtils.readLabel(encodeName('test.tld'), 5)
-      expect(hash).to.equal(labelhash('tld'))
+      let [hash, offset] = await BytesUtils.readLabel(
+        encodeName(`test.${WBT_TLD}`),
+        5,
+      )
+      expect(hash).to.equal(labelhash(WBT_TLD))
       expect(offset.toNumber()).to.equal(9)
     })
 
     it('Reads the terminator from a name', async () => {
-      let [hash, offset] = await BytesUtils.readLabel(encodeName('test.tld'), 9)
+      let [hash, offset] = await BytesUtils.readLabel(
+        encodeName(`test.${WBT_TLD}`),
+        9,
+      )
       expect(hash).to.equal(NULL_HASH)
       expect(offset.toNumber()).to.equal(10)
     })
@@ -50,7 +60,7 @@ describe('BytesUtils', () => {
 
     it('Reverts when given an index after the end of the string', async () => {
       await expect(
-        BytesUtils.readLabel(encodeName('test.tld'), 10),
+        BytesUtils.readLabel(encodeName(`test.${WBT_TLD}`), 10),
       ).to.be.revertedWith('readLabel: Index out of bounds')
     })
   })
@@ -62,22 +72,22 @@ describe('BytesUtils', () => {
       )
     })
 
-    it('Hashes .eth correctly', async () => {
-      expect(await BytesUtils.namehash(encodeName('eth'), 0)).to.equal(
-        namehash('eth'),
+    it('Hashes .wbt correctly', async () => {
+      expect(await BytesUtils.namehash(encodeName(WBT_TLD), 0)).to.equal(
+        namehash(WBT_TLD),
       )
     })
 
     it('Hashes a 2LD correctly', async () => {
-      expect(await BytesUtils.namehash(encodeName('test.tld'), 0)).to.equal(
-        namehash('test.tld'),
-      )
+      expect(
+        await BytesUtils.namehash(encodeName(`test.${WBT_TLD}`), 0),
+      ).to.equal(namehash(`test.${WBT_TLD}`))
     })
 
     it('Hashes partial names correctly', async () => {
-      expect(await BytesUtils.namehash(encodeName('test.tld'), 5)).to.equal(
-        namehash('tld'),
-      )
+      expect(
+        await BytesUtils.namehash(encodeName(`test.${WBT_TLD}`), 5),
+      ).to.equal(namehash(WBT_TLD))
     })
   })
 })
