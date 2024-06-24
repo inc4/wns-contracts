@@ -9,9 +9,8 @@ const { deploy } = require('../test-utils/contracts')
 
 use(solidity)
 
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
-const EMPTY_BYTES32 =
-  '0x0000000000000000000000000000000000000000000000000000000000000000'
+const ZERO_ADDRESS = ethers.constants.AddressZero
+const EMPTY_BYTES32 = ethers.constants.HashZero
 const WBT_TLD = 'wbt'
 
 contract('UniversalResolver', function (accounts) {
