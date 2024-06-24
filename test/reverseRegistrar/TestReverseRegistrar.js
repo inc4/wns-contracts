@@ -10,7 +10,7 @@ const {
   reverse: { getReverseNode },
 } = require('../test-utils')
 
-const EMPTY_ADDRESS = '0x0000000000000000000000000000000000000000'
+const WBT_TLD = 'wbt'
 
 function assertReverseClaimedEventEmitted(tx, addr, node) {
   assert.equal(tx.logs.length, 1)
@@ -240,7 +240,7 @@ contract('ReverseRegistrar', function (accounts) {
         dummyOwnable.address,
         accounts[0],
         resolver.address,
-        'dummyownable.eth',
+        `dummyownable.${WBT_TLD}`,
         {
           from: accounts[0],
         },
@@ -248,7 +248,7 @@ contract('ReverseRegistrar', function (accounts) {
       assert.equal(await ens.owner(dummyOwnableReverseNode), accounts[0])
       assert.equal(
         await resolver.name(dummyOwnableReverseNode),
-        'dummyownable.eth',
+        `dummyownable.${WBT_TLD}`,
       )
     })
   })
