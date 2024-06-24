@@ -9,6 +9,8 @@ const toBN = require('web3-utils').toBN
 
 const { evm, exceptions } = require('../test-utils')
 
+const ONE_DAY_IN_SEC = 24 * 60 * 60
+const WBT_TLD = 'wbt'
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 const ZERO_HASH =
   '0x0000000000000000000000000000000000000000000000000000000000000000'
@@ -25,29 +27,29 @@ contract('BaseRegistrar', function (accounts) {
   before(async () => {
     ens = await ENS.new()
 
-    registrar = await BaseRegistrar.new(ens.address, namehash.hash('eth'), {
+    registrar = await BaseRegistrar.new(ens.address, namehash.hash(WBT_TLD), {
       from: ownerAccount,
     })
     await registrar.addController(controllerAccount, { from: ownerAccount })
-    await ens.setSubnodeOwner('0x0', sha3('eth'), registrar.address)
+    await ens.setSubnodeOwner('0x0', sha3(WBT_TLD), registrar.address)
   })
 
   it('should allow new registrations', async () => {
     var tx = await registrar.register(
       sha3('newname'),
       registrantAccount,
-      86400,
+      ONE_DAY_IN_SEC,
       { from: controllerAccount },
     )
     var block = await web3.eth.getBlock(tx.receipt.blockHash)
     assert.equal(
-      await ens.owner(namehash.hash('newname.eth')),
+      await ens.owner(namehash.hash(`newname.${WBT_TLD}`)),
       registrantAccount,
     )
     assert.equal(await registrar.ownerOf(sha3('newname')), registrantAccount)
     assert.equal(
       (await registrar.nameExpires(sha3('newname'))).toNumber(),
-      block.timestamp + 86400,
+      block.timestamp + ONE_DAY_IN_SEC,
     )
   })
 
@@ -55,24 +57,29 @@ contract('BaseRegistrar', function (accounts) {
     var tx = await registrar.registerOnly(
       sha3('silentname'),
       registrantAccount,
-      86400,
+      ONE_DAY_IN_SEC,
       { from: controllerAccount },
     )
     var block = await web3.eth.getBlock(tx.receipt.blockHash)
-    assert.equal(await ens.owner(namehash.hash('silentname.eth')), ZERO_ADDRESS)
+    assert.equal(
+      await ens.owner(namehash.hash(`silentname.${WBT_TLD}`)),
+      ZERO_ADDRESS,
+    )
     assert.equal(await registrar.ownerOf(sha3('silentname')), registrantAccount)
     assert.equal(
       (await registrar.nameExpires(sha3('silentname'))).toNumber(),
-      block.timestamp + 86400,
+      block.timestamp + ONE_DAY_IN_SEC,
     )
   })
 
   it('should allow renewals', async () => {
     var oldExpires = await registrar.nameExpires(sha3('newname'))
-    await registrar.renew(sha3('newname'), 86400, { from: controllerAccount })
+    await registrar.renew(sha3('newname'), ONE_DAY_IN_SEC, {
+      from: controllerAccount,
+    })
     assert.equal(
       (await registrar.nameExpires(sha3('newname'))).toNumber(),
-      oldExpires.add(toBN(86400)).toNumber(),
+      oldExpires.add(toBN(ONE_DAY_IN_SEC)).toNumber(),
     )
   })
 
@@ -86,13 +93,13 @@ contract('BaseRegistrar', function (accounts) {
 
   it('should only allow the controller to renew', async () => {
     await exceptions.expectFailure(
-      registrar.renew(sha3('newname'), 86400, { from: otherAccount }),
+      registrar.renew(sha3('newname'), ONE_DAY_IN_SEC, { from: otherAccount }),
     )
   })
 
   it('should not permit registration of already registered names', async () => {
     await exceptions.expectFailure(
-      registrar.register(sha3('newname'), otherAccount, 86400, {
+      registrar.register(sha3('newname'), otherAccount, ONE_DAY_IN_SEC, {
         from: controllerAccount,
       }),
     )
@@ -101,24 +108,29 @@ contract('BaseRegistrar', function (accounts) {
 
   it('should not permit renewing a name that is not registered', async () => {
     await exceptions.expectFailure(
-      registrar.renew(sha3('name3'), 86400, { from: controllerAccount }),
+      registrar.renew(sha3('name3'), ONE_DAY_IN_SEC, {
+        from: controllerAccount,
+      }),
     )
   })
 
   it('should permit the owner to reclaim a name', async () => {
-    await ens.setSubnodeOwner(ZERO_HASH, sha3('eth'), accounts[0])
+    await ens.setSubnodeOwner(ZERO_HASH, sha3(WBT_TLD), accounts[0])
     await ens.setSubnodeOwner(
-      namehash.hash('eth'),
+      namehash.hash(WBT_TLD),
       sha3('newname'),
       ZERO_ADDRESS,
     )
-    assert.equal(await ens.owner(namehash.hash('newname.eth')), ZERO_ADDRESS)
-    await ens.setSubnodeOwner(ZERO_HASH, sha3('eth'), registrar.address)
+    assert.equal(
+      await ens.owner(namehash.hash(`newname.${WBT_TLD}`)),
+      ZERO_ADDRESS,
+    )
+    await ens.setSubnodeOwner(ZERO_HASH, sha3(WBT_TLD), registrar.address)
     await registrar.reclaim(sha3('newname'), registrantAccount, {
       from: registrantAccount,
     })
     assert.equal(
-      await ens.owner(namehash.hash('newname.eth')),
+      await ens.owner(namehash.hash(`newname.${WBT_TLD}`)),
       registrantAccount,
     )
   })
@@ -141,7 +153,7 @@ contract('BaseRegistrar', function (accounts) {
     assert.equal(await registrar.ownerOf(sha3('newname')), otherAccount)
     // Transfer does not update ENS without a call to reclaim.
     assert.equal(
-      await ens.owner(namehash.hash('newname.eth')),
+      await ens.owner(namehash.hash(`newname.${WBT_TLD}`)),
       registrantAccount,
     )
     await registrar.transferFrom(
@@ -180,7 +192,9 @@ contract('BaseRegistrar', function (accounts) {
   })
 
   it('should allow renewal during the grace period', async () => {
-    await registrar.renew(sha3('newname'), 86400, { from: controllerAccount })
+    await registrar.renew(sha3('newname'), ONE_DAY_IN_SEC, {
+      from: controllerAccount,
+    })
   })
 
   it('should allow registration of an expired domain', async () => {
@@ -194,7 +208,7 @@ contract('BaseRegistrar', function (accounts) {
       assert.fail('should throw an exception')
     } catch (error) {}
 
-    await registrar.register(sha3('newname'), otherAccount, 86400, {
+    await registrar.register(sha3('newname'), otherAccount, ONE_DAY_IN_SEC, {
       from: controllerAccount,
     })
     assert.equal(await registrar.ownerOf(sha3('newname')), otherAccount)
@@ -202,6 +216,6 @@ contract('BaseRegistrar', function (accounts) {
 
   it('should allow the owner to set a resolver address', async () => {
     await registrar.setResolver(accounts[1], { from: ownerAccount })
-    assert.equal(await ens.resolver(namehash.hash('eth')), accounts[1])
+    assert.equal(await ens.resolver(namehash.hash(WBT_TLD)), accounts[1])
   })
 })

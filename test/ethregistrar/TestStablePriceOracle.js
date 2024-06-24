@@ -3,18 +3,27 @@ const StablePriceOracle = artifacts.require('./StablePriceOracle')
 
 const { expect } = require('chai')
 
+const price1LetterPerSeconds = 0
+const price2LetterPerSeconds = 5
+const price3LetterPerSeconds = 4
+const price4LetterPerSeconds = 3
+const price5LetterPerSeconds = 2
+const price6LetterPerSeconds = 1
+
 contract('StablePriceOracle', function (accounts) {
   let priceOracle
 
   before(async () => {
-    // Dummy oracle with 1 ETH == 10 USD
+    // Dummy oracle with 1 WBT == 10 USD
     var dummyOracle = await DummyOracle.new(1000000000n)
-    // 4 attousd per second for 3 character names, 2 attousd per second for 4 character names,
-    // 1 attousd per second for longer names.
-    priceOracle = await StablePriceOracle.new(
-      dummyOracle.address,
-      [0, 0, 4, 2, 1],
-    )
+    priceOracle = await StablePriceOracle.new(dummyOracle.address, [
+      price1LetterPerSeconds,
+      price2LetterPerSeconds,
+      price3LetterPerSeconds,
+      price4LetterPerSeconds,
+      price5LetterPerSeconds,
+      price6LetterPerSeconds,
+    ])
   })
 
   it('should return correct prices', async () => {
@@ -22,10 +31,10 @@ contract('StablePriceOracle', function (accounts) {
       1440,
     )
     expect(parseInt((await priceOracle.price('quux', 0, 3600)).base)).to.equal(
-      720,
+      1080,
     )
     expect(parseInt((await priceOracle.price('fubar', 0, 3600)).base)).to.equal(
-      360,
+      720,
     )
     expect(
       parseInt((await priceOracle.price('foobie', 0, 3600)).base),
@@ -34,15 +43,13 @@ contract('StablePriceOracle', function (accounts) {
 
   it('should work with larger values', async () => {
     const dummyOracle2 = await DummyOracle.new(1000000000n)
-    // 4 attousd per second for 3 character names, 2 attousd per second for 4 character names,
-    // 1 attousd per second for longer names.
     const priceOracle2 = await StablePriceOracle.new(dummyOracle2.address, [
-      0,
-      0,
-      // 1 USD per second!
-      1000000000000000000n,
-      2,
-      1,
+      price1LetterPerSeconds,
+      price2LetterPerSeconds,
+      1000000000000000000n, // 1 USD per second!
+      price4LetterPerSeconds,
+      price5LetterPerSeconds,
+      price6LetterPerSeconds,
     ])
     expect((await priceOracle2.price('foo', 0, 86400))[0].toString()).to.equal(
       '8640000000000000000000',
