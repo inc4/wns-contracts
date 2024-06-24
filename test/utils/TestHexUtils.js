@@ -5,8 +5,7 @@ const { toUtf8Bytes } = require('ethers/lib/utils')
 
 use(solidity)
 
-const NULL_HASH =
-  '0x0000000000000000000000000000000000000000000000000000000000000000'
+const NULL_HASH = ethers.constants.HashZero
 
 describe('HexUtils', () => {
   let HexUtils

@@ -2,6 +2,8 @@ const TestNameEncoder = artifacts.require('TestNameEncoder.sol')
 const { namehash } = require('../test-utils/ens')
 const { dns } = require('../test-utils')
 
+const WBT_TLD = 'wbt'
+
 contract('UniversalResolver', function () {
   let testNameEncoder
 
@@ -11,9 +13,9 @@ contract('UniversalResolver', function () {
 
   describe('encodeName()', () => {
     it('should encode a name', async () => {
-      const result = await testNameEncoder.encodeName('foo.eth')
-      expect(result['0']).to.equal(dns.hexEncodeName('foo.eth'))
-      expect(result['1']).to.equal(namehash('foo.eth'))
+      const result = await testNameEncoder.encodeName(`foo.${WBT_TLD}`)
+      expect(result['0']).to.equal(dns.hexEncodeName(`foo.${WBT_TLD}`))
+      expect(result['1']).to.equal(namehash(`foo.${WBT_TLD}`))
     })
 
     it('should encode an empty name', async () => {
@@ -23,9 +25,13 @@ contract('UniversalResolver', function () {
     })
 
     it('should encode a long name', async () => {
-      const result = await testNameEncoder.encodeName('something.else.test.eth')
-      expect(result['0']).to.equal(dns.hexEncodeName('something.else.test.eth'))
-      expect(result['1']).to.equal(namehash('something.else.test.eth'))
+      const result = await testNameEncoder.encodeName(
+        `something.else.test.${WBT_TLD}`,
+      )
+      expect(result['0']).to.equal(
+        dns.hexEncodeName(`something.else.test.${WBT_TLD}`),
+      )
+      expect(result['1']).to.equal(namehash(`something.else.test.${WBT_TLD}`))
     })
   })
 })
