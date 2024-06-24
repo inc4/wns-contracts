@@ -13,9 +13,9 @@ const namehash = require('eth-ens-namehash')
 const sha3 = require('web3-utils').sha3
 const toBN = require('web3-utils').toBN
 const { exceptions } = require('../test-utils')
+const { ethers } = require('hardhat')
 
 const WBT_TLD = 'wbt'
-const ONE_DAY_IN_SEC = 24 * 60 * 60
 const WBT_LABEL = sha3(WBT_TLD)
 const WBT_NAMEHASH = namehash.hash(WBT_TLD)
 
@@ -31,7 +31,7 @@ contract('BulkRenewal', function (accounts) {
 
   const ownerAccount = accounts[0] // Account that owns the registrar
   const registrantAccount = accounts[1] // Account that owns test names
-  const EMPTY_ADDRESS = '0x0000000000000000000000000000000000000000'
+  const EMPTY_ADDRESS = ethers.constants.AddressZero
 
   before(async () => {
     // Create a registry
