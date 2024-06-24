@@ -1,6 +1,7 @@
-const EMPTY_ADDRESS = '0x0000000000000000000000000000000000000000'
-const EMPTY_BYTES32 =
-  '0x0000000000000000000000000000000000000000000000000000000000000000'
+const { ethers } = require('hardhat')
+
+const EMPTY_ADDRESS = ethers.constants.AddressZero
+const EMPTY_BYTES32 = ethers.constants.HashZero
 
 module.exports = {
   EMPTY_ADDRESS,

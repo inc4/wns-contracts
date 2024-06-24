@@ -4,8 +4,7 @@ const { ethers } = require('hardhat')
 const { utils, BigNumber: BN } = ethers
 const namehash = require('eth-ens-namehash').hash
 
-const NULL_HASH =
-  '0x0000000000000000000000000000000000000000000000000000000000000000'
+const NULL_HASH = ethers.constants.HashZero
 const WBT_TLD = 'wbt'
 
 function encodeName(name) {
