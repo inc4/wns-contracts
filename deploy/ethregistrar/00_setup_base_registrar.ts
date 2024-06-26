@@ -20,7 +20,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const tx2 = await root
     .connect(await ethers.getSigner(owner))
-    .setSubnodeOwner('0x' + keccak256(process.env.WBT_TLD!), registrar.address)
+    .setSubnodeOwner('0x' + keccak256('wbt'), registrar.address)
   console.log(
     `Setting owner of wbt node to registrar on root (tx: ${tx2.hash})...`,
   )

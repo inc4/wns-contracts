@@ -12,7 +12,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const deployArgs = {
     from: deployer,
-    args: [registry.address, namehash.hash(process.env.WBT_TLD)],
+    args: [registry.address, namehash.hash('wbt')],
     log: true,
   }
 
