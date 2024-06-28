@@ -54,7 +54,9 @@ import '@ensdomains/ens-contracts/contracts/resolvers/Resolver.sol';
 
 If your environment does not have compiler, you can access to the raw hardhat artifacts files at `node_modules/@inc4/wns-contracts/artifacts/contracts/${modName}/${contractName}.sol/${contractName}.json`
 
-## Contracts
+---
+
+# Contracts
 
 ## Registry
 
@@ -74,7 +76,7 @@ Implementation of the reverse registrar responsible for managing reverse resolut
 
 ## EthRegistrar
 
-Implements an [ENS]() registrar intended for the .wbt TLD.
+Implements an [WNS](https://dev.d8zwpdyz84dzj.amplifyapp.com) registrar intended for the .wbt TLD.
 
 ### BaseRegistrar
 
@@ -273,6 +275,8 @@ yarn build
 ```
 yarn deploy:white_chain_testnet
 ```
+
+- Contract deploy process specified in [/deploy](https://github.com/inc4/wns-contracts/tree/wns/deploy) folder. After deploy, files with details about contracts with ABI, address, etc., created in [/deployments](https://github.com/inc4/wns-contracts/tree/wns/deployments) folder. Folder name equal to network name in which contracts were deployed.
 
 ### How to publish
 
