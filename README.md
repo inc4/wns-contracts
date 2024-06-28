@@ -1,8 +1,8 @@
-# ENS
+# WNS Smart-contracts
 
-[![Build Status](https://travis-ci.org/ensdomains/ens-contracts.svg?branch=master)](https://travis-ci.org/ensdomains/ens-contracts)
+For an introduction to WNS documentation, see the original ENS documentation. [docs.ens.domains](https://docs.ens.domains/).
 
-For documentation of the ENS system, see [docs.ens.domains](https://docs.ens.domains/).
+The main differences will be described below.
 
 ## npm package
 
@@ -25,7 +25,7 @@ import {
   ReverseRegistrar,
   StablePriceOracle,
   TestRegistrar,
-} from '@ensdomains/ens-contracts'
+} from '@inc4/wns-contracts'
 ```
 
 ## Importing from solidity
@@ -52,9 +52,11 @@ import '@ensdomains/ens-contracts/contracts/resolvers/Resolver.sol';
 
 ## Accessing to binary file.
 
-If your environment does not have compiler, you can access to the raw hardhat artifacts files at `node_modules/@ensdomains/ens-contracts/artifacts/contracts/${modName}/${contractName}.sol/${contractName}.json`
+If your environment does not have compiler, you can access to the raw hardhat artifacts files at `node_modules/@inc4/wns-contracts/artifacts/contracts/${modName}/${contractName}.sol/${contractName}.json`
 
-## Contracts
+---
+
+# Contracts
 
 ## Registry
 
@@ -68,27 +70,13 @@ Interface of the ENS Registry.
 
 Implementation of the ENS Registry, the central contract used to look up resolvers and owners for domains.
 
-### ENSRegistryWithFallback
-
-The new implementation of the ENS Registry after [the 2020 ENS Registry Migration](https://docs.ens.domains/ens-migration-february-2020/technical-description#new-ens-deployment).
-
-### FIFSRegistrar
-
-Implementation of a simple first-in-first-served registrar, which issues (sub-)domains to the first account to request them.
-
 ### ReverseRegistrar
 
 Implementation of the reverse registrar responsible for managing reverse resolution via the .addr.reverse special-purpose TLD.
 
-### TestRegistrar
-
-Implementation of the `.test` registrar facilitates easy testing of ENS on the Ethereum test networks. Currently deployed on Ropsten network, it provides functionality to instantly claim a domain for test purposes, which expires 28 days after it was claimed.
-
 ## EthRegistrar
 
-Implements an [ENS](https://ens.domains/) registrar intended for the .eth TLD.
-
-These contracts were audited by ConsenSys Diligence; the audit report is available [here](https://github.com/ConsenSys/ens-audit-report-2019-02).
+Implements an [WNS](https://dev.d8zwpdyz84dzj.amplifyapp.com) registrar intended for the .wbt TLD.
 
 ### BaseRegistrar
 
@@ -118,7 +106,7 @@ The commit/reveal process is used to avoid frontrunning, and operates as follows
 
 The minimum delay and expiry for commitments exist to prevent miners or other users from effectively frontrunning registrations.
 
-### SimplePriceOracle
+### PriceOracle
 
 SimplePriceOracle is a trivial implementation of the pricing oracle for the EthRegistrarController that always returns a fixed price per domain per year, determined by the contract owner.
 
@@ -139,7 +127,34 @@ PublicResolver includes the following profiles that implements different EIPs.
 - NameResolver = EIP 181 - Reverse resolution (`name()`).
 - PubkeyResolver = EIP 619 - SECP256k1 public keys (`pubkey()`).
 - TextResolver = EIP 634 - Text records (`text()`).
-- DNSResolver = Experimental support is available for hosting DNS domains on the Ethereum blockchain via ENS. [The more detail](https://veox-ens.readthedocs.io/en/latest/dns.html) is on the old ENS doc.
+
+## Differences
+
+- Grace period was changed from 90 days to 30 days
+
+- Price change [mechanism](https://github.com/inc4/wns-contracts/blob/2abe48d6cfa57016b5960bc64216970e31f68e93/contracts/ethregistrar/StablePriceOracle.sol#L69). This mechanism can only be used by the owner of the contract.
+
+- Smart contract [PriceOracle](https://github.com/inc4/wns-contracts/blob/wns/contracts/ethregistrar/PriceOracle.sol) has been developed for pushing the price of WBT. This smart contract has a mechanism for granting operator rights, according to private key, for pushing the current price on WBT. This operator can be replaced using the built-in [mechanism](https://github.com/inc4/wns-contracts/blob/2abe48d6cfa57016b5960bc64216970e31f68e93/contracts/ethregistrar/PriceOracle.sol#L23), this operation can only be carried out by the owner of the contract.
+
+- Switching environments for deploying smart contracts occurs using the [hardhat configuration](https://github.com/inc4/wns-contracts/blob/wns/hardhat.config.ts) , as well as setting the necessary [environment variables](https://github.com/inc4/wns-contracts/blob/wns/.env.org)
+
+### Buying a name with a USDC.e
+
+The process of buying a name using the USDC.e is almost the same as for WBT, with the exception of a few differences:
+
+- The tenant must provide approval for this transaction in the contract using the built-in mechanism of the USDC.e smart contract, similar to the [ERC20.approve](https://docs.openzeppelin.com/contracts/2.x/api/token/erc20#IERC20-approve-address-uint256-) smart contract.
+
+- Then you need to check the approval operation using the built-in method of the USDC.e smart contract, similar to the [ERC20.allowance](https://docs.openzeppelin.com/contracts/2.x/api/token/erc20#IERC20-allowance-address-address-) smart contract.
+
+- Next comes the standard name registration [process](https://docs.ens.domains/registry/eth#commit-reveal) :
+
+  - Creating a commitment hash. [makeCommitment](https://github.com/inc4/wns-contracts/blob/2abe48d6cfa57016b5960bc64216970e31f68e93/contracts/ethregistrar/ETHRegistrarController.sol#L132C14-L132C28)
+
+  - [Commit](https://github.com/inc4/wns-contracts/blob/2abe48d6cfa57016b5960bc64216970e31f68e93/contracts/ethregistrar/ETHRegistrarController.sol#L161)
+
+  - Wait 60 seconds before [registration](<https://docs.ens.domains/registry/eth#commit-reveal:~:text=Note%20this%20does%20require%20an%20on%2Dchain%20transaction.%20After%20having%20committed%20it%20is%20recommended%20to%20wait%20at%20least%20the%20MIN_COMMITMENT_AGE%20(~60%20seconds)%20before%20registering.>)
+
+  - To register a name using this [functionality](https://github.com/inc4/wns-contracts/blob/2abe48d6cfa57016b5960bc64216970e31f68e93/contracts/ethregistrar/ETHRegistrarController.sol#L168). The difference between the standard method of buying a name is that the required amount of USDC.e is passed as an additional parameter to the function call.
 
 ## Developer guide
 
@@ -150,10 +165,96 @@ This repo runs a husky precommit to prettify all contract files to keep them con
 ### How to setup
 
 ```
-git clone https://github.com/ensdomains/ens-contracts
+git clone https://github.com/inc4/wns-contracts
 cd ens-contracts
 yarn
 ```
+
+### Env vars description
+
+- create file (.env) to set environment variable
+
+  OWNER_KEY:
+
+  ```
+  owner of contracts private key
+  ```
+
+  DEPLOYER_KEY:
+
+  ```
+  deployer of contracts private key
+  ```
+
+  WHITE_CHAIN_TESTNET_NETWORK_URL:
+
+  ```
+  url for connecting to the blockchain network
+  ```
+
+  USDC_E_CONTRACT_ADDRESS:
+
+  ```
+  the address of the deployed USDC.e contract in the blockchain network specified in NETWORK_URL
+  ```
+
+  PRICE_2_LETTER:
+  PRICE_3_LETTER:
+  PRICE_4_LETTER:
+  PRICE_5_LETTER:
+  PRICE_6_LETTER:
+
+  ```
+  required prices per year for renting a name of a certain length
+  ```
+
+  DEFAULT_ORACLE_PRICE
+
+  ```
+  if necessary, set a custom starting price value for one wbt to the usd
+  ```
+
+  START_PREMIUM_PRICE:
+
+  ```
+  default price equal 100000000000000000000000000, referring to ens documentation
+  ```
+
+  TOTAL_DAYS_FOR_DUTCH_AUCTION:
+
+  ```
+  default value equal 21, referring to ens documentation
+  ```
+
+  MIN_ALLOWED_DOMAIN_LENGTH:
+
+  ```
+  default length equal 2, referring to the terms of reference
+  ```
+
+  PRICE_ORACLE_OPERATOR_ADDRESS:
+
+  ```
+  price oracle contract operator private key
+  ```
+
+  COIN_GECKO_API_DOMAIN
+
+  ```
+  Coin Gecko API domain. Example (api.coingecko.com/pro-api.coingecko.com)
+  ```
+
+  COIN_GECKO_API_KEY_HEADER
+
+  ```
+  Coin Gecko API key header. Example (x_cg_demo_api_key/x_cg_pro_api_key)
+  ```
+
+  COIN_GECKO_API_KEY:
+
+  ```
+  API key to access CoinGecko
+  ```
 
 ### How to run tests
 
@@ -161,53 +262,24 @@ yarn
 yarn test
 ```
 
+### How to build and deploy contracts
+
+- for build contracts:
+
+```
+yarn build
+```
+
+- for build and deploy contracts to white_chain_testnet
+
+```
+yarn deploy:white_chain_testnet
+```
+
+- Contract deploy process specified in [/deploy](https://github.com/inc4/wns-contracts/tree/wns/deploy) folder. After deploy, files with details about contracts with ABI, address, etc., created in [/deployments](https://github.com/inc4/wns-contracts/tree/wns/deployments) folder. Folder name equal to network name in which contracts were deployed.
+
 ### How to publish
 
 ```
 yarn pub
 ```
-
-### Release flow
-
-1. Create a `feature` branch from `staging` branch
-2. Make code updates
-3. Ensure you are synced up with `staging`
-4. Code should now be in a state where you think it can be deployed to production
-5. Create a "Release Candidate" [release](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases) on GitHub. This will be of the form `v1.2.3-RC0`. This tagged commit is now subject to our bug bounty.
-6. Have the tagged commit audited if necessary
-7. If changes are required, make the changes and then once ready for review create another GitHub release with an incremented RC value `v1.2.3-RC0` -> `v.1.2.3-RC1`. Repeat as necessary.
-8. Deploy to testnet. Open a pull request to merge the deploy artifacts into
-   the `feature` branch. Create GitHub release of the form `v1.2.3-testnet` from the commit that has the new deployment artifacts.
-9. Get someone to review and approve the deployment and then merge. You now MUST merge this branch into `staging` branch.
-10. If any further changes are needed, you can either make them on the existing feature branch that is in sync or create a new branch, and follow steps 1 -> 9. Repeat as necessary.
-11. Make a deployment to ethereum mainnet from `staging`. Create a GitHub release of the form `v1.2.3` from the commit that has the new deployment artifacts.
-12. Open a PR to merge into `main`. Have it reviewed and merged.
-
-### Cherry-picked release flow
-
-Certain changes can be released in isolation via cherry-picking, although ideally we would always release from `staging`.
-
-1. Create a new branch from `mainnet`.
-2. Cherry-pick from `staging` into new branch.
-3. Deploy to ethereum mainnet, tag the commit that has deployment artifacts and create a release.
-4. Merge into `mainnet`.
-
-### Emergency release process
-
-1. Branch from `main`, make fixes, deploy to testnet (can skip), deploy to mainnet
-2. Merge changes back into `main` and `staging` immediately after deploy
-3. Create GitHub releases, if you didn't deploy to testnet in step 1, do it now
-
-### Notes
-
-- Deployed code should always match source code in mainnet releases. This may not be the case for `staging`.
-- `staging` branch and `main` branch should start in sync
-- `staging` is intended to be a practice `main`. Only code that is intended to be released to `main` can be merged to `staging`. Consequently:
-  - Feature branches will be long-lived
-  - Feature branches must be kept in sync with `staging`
-  - Audits are conducted on feature branches
-- All code that is on `staging` and `main` should be deployed to testnet and mainnet respectively i.e. these branches should not have any undeployed code
-- It is preferable to not edit the same file on different feature branches.
-- Code on `staging` and `main` will always be a subset of what is deployed, as smart contracts cannot be undeployed.
-- Release candidates, `staging` and `main` branch are subject to our bug bounty
-- Releases follow semantic versioning and releases should contain a description of changes with developers being the intended audience
