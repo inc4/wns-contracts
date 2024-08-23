@@ -14,7 +14,8 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {INameWrapper} from "../wrapper/INameWrapper.sol";
 import {ERC20Recoverable} from "../utils/ERC20Recoverable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 error CommitmentTooNew(bytes32 commitment);
 error CommitmentTooOld(bytes32 commitment);
@@ -39,6 +40,7 @@ contract ETHRegistrarController is
 {
     using StringUtils for *;
     using Address for address;
+    using SafeERC20 for IERC20;
 
     uint256 public minAllowedDomainLength;
     address public usdcEAddress;
@@ -295,17 +297,7 @@ contract ETHRegistrarController is
 
         uint256 amountUSDCe = usdcEContract.balanceOf(address(this));
 
-        bool isApproved = usdcEContract.approve(address(this), amountUSDCe);
-
-        require(isApproved, "Approved denied");
-
-        bool transferSuccess = usdcEContract.transferFrom(
-            address(this),
-            owner(),
-            amountUSDCe
-        );
-
-        require(transferSuccess, "Transfer failed");
+        usdcEContract.safeTransfer(owner(), amountUSDCe);
     }
 
     function updateMinAllowedDomainLength(
