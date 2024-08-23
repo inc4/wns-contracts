@@ -276,7 +276,7 @@ yarn build
 yarn deploy:white_chain_testnet
 ```
 
-- Contract deploy process specified in [/deploy](https://github.com/inc4/wns-contracts/tree/wns/deploy) folder. After deploy, files with details about contracts with ABI, address, etc., created in [/deployments](https://github.com/inc4/wns-contracts/tree/wns/deployments) folder. Folder name equal to network name in which contracts were deployed.
+- Contract deploy process specified in [/deploy](https://github.com/inc4/wns-contracts/tree/wns/deploy) folder, also [deployment-scripts-summary](https://github.com/inc4/wns-contracts/tree/wns/Deployment-scripts-summary.md). After deploy, files with details about contracts with ABI, address, etc., created in [/deployments](https://github.com/inc4/wns-contracts/tree/wns/deployments) folder. Folder name equal to network name in which contracts were deployed.
 
 ### How to publish
 
