@@ -3,7 +3,6 @@ pragma solidity ~0.8.17;
 
 import "./IPriceOracle.sol";
 import "./StringUtils.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -67,6 +66,10 @@ contract StablePriceOracle is Ownable, IPriceOracle {
     }
 
     function updatePrices(uint256[] memory rentPrices) external onlyOwner {
+        require(
+            rentPrices.length == 6,
+            "rentPrices array length does not match the required length"
+        );
         price1Letter = rentPrices[0];
         price2Letter = rentPrices[1];
         price3Letter = rentPrices[2];
