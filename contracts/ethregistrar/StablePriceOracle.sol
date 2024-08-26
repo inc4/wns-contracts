@@ -28,6 +28,10 @@ contract StablePriceOracle is Ownable, IPriceOracle {
     event RentPriceChanged(uint256[] prices);
 
     constructor(AggregatorInterface _usdOracle, uint256[] memory _rentPrices) {
+        require(
+            _rentPrices.length == 6,
+            "rentPrices array length does not match the required length"
+        );
         usdOracle = _usdOracle;
         price1Letter = _rentPrices[0];
         price2Letter = _rentPrices[1];
