@@ -3,6 +3,8 @@ pragma solidity ~0.8.17;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+error NotAnOperator(address requester);
+
 contract PriceOracle is Ownable {
     uint256 wbtPriceToUSD;
     address operator;
@@ -11,8 +13,8 @@ contract PriceOracle is Ownable {
     event NewPrice(uint256 _value);
 
     constructor(uint256 _value, address _operator) {
-        wbtPriceToUSD = _value;
-        operator = _operator;
+        setUSDPrice(_value);
+        setNewOperator(_operator);
     }
 
     function latestAnswer() public view returns (uint256) {
@@ -30,7 +32,9 @@ contract PriceOracle is Ownable {
     }
 
     modifier onlyOperator() {
-        require(msg.sender == operator);
+        if (!(operator == msg.sender || msg.sender == owner())) {
+            revert NotAnOperator(msg.sender);
+        }
         _;
     }
 }
