@@ -128,17 +128,39 @@ PublicResolver includes the following profiles that implements different EIPs.
 - PubkeyResolver = EIP 619 - SECP256k1 public keys (`pubkey()`).
 - TextResolver = EIP 634 - Text records (`text()`).
 
-## Differences
+# Differences
 
-- Grace period was changed from 90 days to 30 days
+- All constants in contracts were checked and changed to the necessary ones:
+
+  - GRACE_PERIOD was changed from 90 days to 30 days
+
+  - ETH_NAMEHASH was changed from (namehash of eth = "0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae") to (namehash of wbt = "0xfc97184b4cad3ee23a98f70b5e40845bfde0e68147e57dfac1d04a3016c10a5d")
+
+  - ETH_NODE was changed from (namehash of eth = "0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae") to (namehash of wbt = "0xfc97184b4cad3ee23a98f70b5e40845bfde0e68147e57dfac1d04a3016c10a5d")
+
+  - ETH_LABELHASH was changed from (labelhash of eth = "0x4f5b812789fc606be1b3b16908db13fc7a9adf7ca72641f84d75b47069d3d7f0") to (labelhash of wbt = "0x9e313471cf3f4d3d1d03709ee288147c4acfd0239b01dc8e1a1dc598ea223b64")
+
+  - names[ETH_NODE] was changed from "\x03eth\x00" to "\x03wbt\x00";
+
+- The pricing of domains differs from the original ENS. In these contracts, it is possible to purchase a domain from 2 to 6 characters long. The price for a domain is set in variable environments when deploying contracts. A mechanism for changing the price and the minimum permitted length of a domain is also provided.
 
 - Price change [mechanism](https://github.com/inc4/wns-contracts/blob/2abe48d6cfa57016b5960bc64216970e31f68e93/contracts/ethregistrar/StablePriceOracle.sol#L69). This mechanism can only be used by the owner of the contract.
 
-- Smart contract [PriceOracle](https://github.com/inc4/wns-contracts/blob/wns/contracts/ethregistrar/PriceOracle.sol) has been developed for pushing the price of WBT. This smart contract has a mechanism for granting operator rights, according to private key, for pushing the current price on WBT. This operator can be replaced using the built-in [mechanism](https://github.com/inc4/wns-contracts/blob/2abe48d6cfa57016b5960bc64216970e31f68e93/contracts/ethregistrar/PriceOracle.sol#L23), this operation can only be carried out by the owner of the contract.
+- [Mechanism](https://github.com/inc4/wns-contracts/blob/64eb082385e9b9203f597fb8a371a8d0029b33ee/contracts/ethregistrar/ETHRegistrarController.sol#L299) for changing the minimum permitted domain length. This mechanism can only be used by the owner of the contract.
+
+- Smart contract [PriceOracle](https://github.com/inc4/wns-contracts/blob/wns/contracts/ethregistrar/PriceOracle.sol) has been developed for pushing the price of WBT. This smart contract has a mechanism for granting operator rights, according to private key, for pushing the current price on WBT. This operator can be replaced using the built-in [mechanism](https://github.com/inc4/wns-contracts/blob/2abe48d6cfa57016b5960bc64216970e31f68e93/contracts/ethregistrar/PriceOracle.sol#L23), this operation can only be carried out by the owner of the contract. More details about the contract below:
 
 - Switching environments for deploying smart contracts occurs using the [hardhat configuration](https://github.com/inc4/wns-contracts/blob/wns/hardhat.config.ts) , as well as setting the necessary [environment variables](https://github.com/inc4/wns-contracts/blob/wns/.env.org)
 
-### Buying a name with a USDC.e
+## USDC.e integration
+
+In these contracts, domain purchase is available using USDC.e. Further, all the functionality responsible for the purchase, renewal of the domain name, as well as the withdrawal of funds and price formation will be described.
+
+### Price formation by USDC.e
+
+Pricing occurs in the same way as using WBT. To get the current price in USDC.e for a domain of a certain length, use this [functionality](https://github.com/inc4/wns-contracts/blob/64eb082385e9b9203f597fb8a371a8d0029b33ee/contracts/ethregistrar/ETHRegistrarController.sol#L113).
+
+### Domain registration with a USDC.e
 
 The process of buying a name using the USDC.e is almost the same as for WBT, with the exception of a few differences:
 
@@ -146,7 +168,7 @@ The process of buying a name using the USDC.e is almost the same as for WBT, wit
 
 - Then you need to check the approval operation using the built-in method of the USDC.e smart contract, similar to the [ERC20.allowance](https://docs.openzeppelin.com/contracts/2.x/api/token/erc20#IERC20-allowance-address-address-) smart contract.
 
-- Next comes the standard name registration [process](https://docs.ens.domains/registry/eth#commit-reveal) :
+- Next comes the standard name registration [process](https://docs.ens.domains/registry/eth#commit-reveal):
 
   - Creating a commitment hash. [makeCommitment](https://github.com/inc4/wns-contracts/blob/2abe48d6cfa57016b5960bc64216970e31f68e93/contracts/ethregistrar/ETHRegistrarController.sol#L132C14-L132C28)
 
@@ -154,7 +176,19 @@ The process of buying a name using the USDC.e is almost the same as for WBT, wit
 
   - Wait 60 seconds before [registration](<https://docs.ens.domains/registry/eth#commit-reveal:~:text=Note%20this%20does%20require%20an%20on%2Dchain%20transaction.%20After%20having%20committed%20it%20is%20recommended%20to%20wait%20at%20least%20the%20MIN_COMMITMENT_AGE%20(~60%20seconds)%20before%20registering.>)
 
-  - To register a name using this [functionality](https://github.com/inc4/wns-contracts/blob/2abe48d6cfa57016b5960bc64216970e31f68e93/contracts/ethregistrar/ETHRegistrarController.sol#L168). The difference between the standard method of buying a name is that the required amount of USDC.e is passed as an additional parameter to the function call.
+  - To register a name use this [functionality](https://github.com/inc4/wns-contracts/blob/2abe48d6cfa57016b5960bc64216970e31f68e93/contracts/ethregistrar/ETHRegistrarController.sol#L168). The difference between the standard method of buying a name is that the required amount of USDC.e is passed as an additional parameter to the function call.
+
+### Renew a name with USDC.e
+
+- The tenant must provide approval for this transaction in the contract using the built-in mechanism of the USDC.e smart contract, similar to the [ERC20.approve](https://docs.openzeppelin.com/contracts/2.x/api/token/erc20#IERC20-approve-address-uint256-) smart contract.
+
+- Then you need to check the approval operation using the built-in method of the USDC.e smart contract, similar to the [ERC20.allowance](https://docs.openzeppelin.com/contracts/2.x/api/token/erc20#IERC20-allowance-address-address-) smart contract.
+
+- To renew a name use this [functionality](https://github.com/inc4/wns-contracts/blob/64eb082385e9b9203f597fb8a371a8d0029b33ee/contracts/ethregistrar/ETHRegistrarController.sol#L243). The difference between the standard method of renew a name is that the required amount of USDC.e is passed as an additional parameter to the function call.
+
+### Withdraw USDC.e funds
+
+- For withdrawal of USDC.e funds use this [functionality](https://github.com/inc4/wns-contracts/blob/64eb082385e9b9203f597fb8a371a8d0029b33ee/contracts/ethregistrar/ETHRegistrarController.sol#L291). Withdrawal of funds is similar to withdrawal of WBT funds.
 
 ## Developer guide
 
@@ -277,9 +311,3 @@ yarn deploy:white_chain_testnet
 ```
 
 - Contract deploy process specified in [/deploy](https://github.com/inc4/wns-contracts/tree/wns/deploy) folder, also [deployment-scripts-summary](https://github.com/inc4/wns-contracts/tree/wns/Deployment-scripts-summary.md). After deploy, files with details about contracts with ABI, address, etc., created in [/deployments](https://github.com/inc4/wns-contracts/tree/wns/deployments) folder. Folder name equal to network name in which contracts were deployed.
-
-### How to publish
-
-```
-yarn pub
-```
