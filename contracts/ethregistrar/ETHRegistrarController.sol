@@ -185,13 +185,11 @@ contract ETHRegistrarController is
 
         IERC20 usdcEContract = IERC20(usdcEAddress);
 
-        bool transferSuccess = usdcEContract.transferFrom(
+        usdcEContract.safeTransferFrom(
             msg.sender,
             address(this),
             price.base + price.premium
         );
-
-        require(transferSuccess, "Transfer failed");
 
         uint256 expires = _register(
             name,
@@ -256,13 +254,11 @@ contract ETHRegistrarController is
 
         IERC20 usdcEContract = IERC20(usdcEAddress);
 
-        bool transferSuccess = usdcEContract.transferFrom(
+        usdcEContract.safeTransferFrom(
             msg.sender,
             address(this),
             price.base + price.premium
         );
-
-        require(transferSuccess, "Transfer failed");
 
         uint256 expires = nameWrapper.renew(tokenId, duration);
 
